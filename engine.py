@@ -1,0 +1,223 @@
+"""
+engine.py — Farma2go P&L Calculation Engine
+Combines carrier invoices + Odoo sales + Ads spend into P&L.
+"""
+
+import pandas as pd
+import numpy as np
+import json
+import os
+from datetime import datetime
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+os.makedirs(DATA_DIR, exist_ok=True)
+
+ALERT_THRESHOLD_EUR = 8.0   # flag shipment if loss > 8€ AND paid
+ALERT_RATIO         = 3.0   # flag if cost/charged > 3x
+
+COUNTRY_NORM = {
+    'ES':'España','España':'España','PT':'Portugal','Portugal':'Portugal',
+    'FR':'Francia','Francia':'Francia','DE':'Alemania','Alemania':'Alemania',
+    'IT':'Italia','Italia':'Italia','GB':'Reino Unido','UK':'Reino Unido','Reino Unido':'Reino Unido',
+    'BE':'Bélgica','Bélgica':'Bélgica','NL':'Holanda','Países Bajos':'Holanda','Holanda':'Holanda',
+    'LU':'Luxemburgo',
+}
+
+
+def save_data(key, df_or_dict):
+    path = os.path.join(DATA_DIR, f'{key}.json')
+    if isinstance(df_or_dict, pd.DataFrame):
+        df_or_dict.to_json(path, orient='records', force_ascii=False)
+    else:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(df_or_dict, f, ensure_ascii=False)
+
+
+def load_data(key):
+    path = os.path.join(DATA_DIR, f'{key}.json')
+    if not os.path.exists(path):
+        return None
+    try:
+        return pd.read_json(path, orient='records')
+    except:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+
+
+def list_saved():
+    files = {}
+    for f in os.listdir(DATA_DIR):
+        if f.endswith('.json'):
+            key = f[:-5]
+            path = os.path.join(DATA_DIR, f)
+            size = os.path.getsize(path)
+            mtime = datetime.fromtimestamp(os.path.getmtime(path)).strftime('%Y-%m-%d %H:%M')
+            # Try to get row count
+            try:
+                df = pd.read_json(path, orient='records')
+                rows = len(df)
+            except:
+                rows = '?'
+            files[key] = {'rows': rows, 'size_kb': round(size/1024, 1), 'updated': mtime}
+    return files
+
+
+def build_pnl(ym_filter=None):
+    """
+    Build complete P&L combining all loaded data.
+    Returns dict with pnl_by_country, pnl_by_carrier, alerts, summary.
+    """
+    # Load all available data
+    shipping_df = load_data('shipping_costs')   # carrier invoices
+    sales_df    = load_data('odoo_sales')        # Odoo order lines
+    ads_df      = load_data('google_ads')        # Ads spend
+
+    if shipping_df is None and sales_df is None:
+        return {'error': 'No hay datos cargados. Sube al menos las facturas de transportistas o el listado de ventas de Odoo.'}
+
+    results = {}
+
+    # ── SHIPPING MARGIN ───────────────────────────────────────────
+    if shipping_df is not None:
+        if ym_filter:
+            months = [ym_filter] if isinstance(ym_filter, str) else ym_filter
+            shipping_df = shipping_df[shipping_df['ym'].isin(months)]
+
+        ship_summary = shipping_df.groupby(['carrier','country','ym']).agg(
+            n_envios=('ref','count'),
+            coste_total=('cost_eur','sum'),
+            ingreso_total=('precio_envio','sum'),
+            margen_envio=('margin','sum'),
+        ).reset_index()
+        results['shipping'] = ship_summary.to_dict('records')
+
+        # Country × month shipping
+        cty_ship = shipping_df.groupby(['country','ym']).agg(
+            n_envios=('ref','count'),
+            coste_envio=('cost_eur','sum'),
+            ingreso_envio=('precio_envio','sum'),
+            margen_envio=('margin','sum'),
+        ).reset_index()
+        results['country_shipping'] = cty_ship.to_dict('records')
+
+    # ── PRODUCT MARGIN ────────────────────────────────────────────
+    if sales_df is not None:
+        if ym_filter:
+            months = [ym_filter] if isinstance(ym_filter, str) else ym_filter
+            sales_df = sales_df[sales_df['ym'].isin(months)]
+
+        # Exclude shipping product lines
+        from parsers import SHIPPING_PRODUCTS
+        prod_df = sales_df[~sales_df['is_shipping']].copy() if 'is_shipping' in sales_df.columns else sales_df
+        ship_lines = sales_df[sales_df['is_shipping']].copy() if 'is_shipping' in sales_df.columns else pd.DataFrame()
+
+        # Order-level product margin
+        order_prod = prod_df.groupby('ref_odoo').agg(
+            plataforma=('plataforma','first'),
+            ym=('ym','first'),
+            country=('country','first') if 'country' in prod_df.columns else ('plataforma','first'),
+            venta=('venta_total','sum'),
+            cogs=('coste_total','sum'),
+        ).reset_index()
+        order_prod['mg_prod'] = order_prod['venta'] - order_prod['cogs']
+
+        # Shipping revenue from Odoo lines
+        order_ship_rev = ship_lines.groupby('ref_odoo').agg(
+            ing_envio=('venta_total','sum')
+        ).reset_index() if len(ship_lines) else pd.DataFrame(columns=['ref_odoo','ing_envio'])
+
+        order_merged = order_prod.merge(order_ship_rev, on='ref_odoo', how='left')
+        order_merged['ing_envio'] = order_merged['ing_envio'].fillna(0)
+
+        # Merge with shipping costs if available
+        if shipping_df is not None and 'ref' in shipping_df.columns:
+            ship_cost_by_order = shipping_df.groupby('ref').agg(
+                cost_envio=('cost_eur','sum'),
+                carrier=('carrier','first'),
+                country_carrier=('country','first'),
+            ).reset_index()
+            order_merged = order_merged.merge(
+                ship_cost_by_order, left_on='ref_shopify_clean', right_on='ref', how='left'
+            ) if 'ref_shopify_clean' in order_merged.columns else order_merged
+
+        if 'cost_envio' in order_merged.columns:
+            order_merged['cost_envio'] = order_merged['cost_envio'].fillna(0)
+        else:
+            order_merged['cost_envio'] = 0
+
+        order_merged['mg_envio'] = order_merged['ing_envio'] - order_merged['cost_envio']
+        order_merged['mg_final'] = order_merged['mg_prod'] + order_merged['mg_envio']
+
+        results['order_count'] = len(order_merged)
+
+        # Country × month P&L
+        grp_col = 'country_carrier' if 'country_carrier' in order_merged.columns else 'country' if 'country' in order_merged.columns else 'plataforma'
+        cty_pnl = order_merged.groupby([grp_col,'ym']).agg(
+            n_pedidos=('ref_odoo','count'),
+            venta=('venta','sum'),
+            cogs=('cogs','sum'),
+            mg_prod=('mg_prod','sum'),
+            ing_envio=('ing_envio','sum'),
+            cost_envio=('cost_envio','sum'),
+            mg_final=('mg_final','sum'),
+        ).reset_index()
+        cty_pnl.columns = ['country' if c==grp_col else c for c in cty_pnl.columns]
+        cty_pnl['mg_pct'] = cty_pnl['mg_final'] / (cty_pnl['venta'] + cty_pnl['ing_envio']).replace(0, np.nan)
+        results['pnl_by_country'] = cty_pnl.to_dict('records')
+
+    # ── ADS INTEGRATION ───────────────────────────────────────────
+    if ads_df is not None:
+        if ym_filter:
+            months = [ym_filter] if isinstance(ym_filter, str) else ym_filter
+            ads_df = ads_df[ads_df['ym'].isin(months)]
+
+        ads_summary = ads_df.groupby(['pais','ym']).agg(
+            gasto_ads=('coste','sum'),
+            conversiones=('conversiones','sum'),
+            valor_conv=('valor_conv','sum'),
+            roas=('roas','mean'),
+        ).reset_index()
+        results['ads'] = ads_summary.to_dict('records')
+        results['total_ads'] = float(ads_df['coste'].sum())
+
+    # ── ALERTS ────────────────────────────────────────────────────
+    if shipping_df is not None:
+        alerts = shipping_df[
+            (shipping_df.get('margin', pd.Series(dtype=float)) < -ALERT_THRESHOLD_EUR) &
+            (shipping_df.get('precio_envio', pd.Series(dtype=float)) > 0)
+        ].copy() if 'margin' in shipping_df.columns and 'precio_envio' in shipping_df.columns else pd.DataFrame()
+
+        if len(alerts):
+            alerts['ratio'] = (alerts['cost_eur'] / alerts['precio_envio'].replace(0, np.nan)).round(2)
+            alerts = alerts[alerts['ratio'] >= ALERT_RATIO] if 'ratio' in alerts.columns else alerts
+            alerts = alerts.nsmallest(min(100, len(alerts)), 'margin')
+            results['alerts'] = alerts[['ref','carrier','country','weight_kg','precio_envio','cost_eur','margin']].to_dict('records')
+            results['alert_count'] = len(alerts)
+            results['alert_total_loss'] = float(alerts['margin'].sum())
+
+    return results
+
+
+def compute_shipping_margin(carrier_df, shopify_revenue: dict):
+    """
+    Add pricing to carrier invoice data.
+    carrier_df: has ref, carrier, country, weight_kg, cost_eur
+    shopify_revenue: dict {order_ref → shipping_charged}
+    Returns carrier_df with precio_envio and margin columns.
+    """
+    carrier_df = carrier_df.copy()
+    carrier_df['precio_envio'] = carrier_df['ref'].map(
+        lambda r: shopify_revenue.get(str(r).lstrip('#'), shopify_revenue.get(str(r), None))
+    )
+    # 0 = free shipping (order exists but no shipping charge)
+    # None = not found (exclude from analysis)
+    carrier_df['has_price'] = carrier_df['precio_envio'].notna()
+    carrier_df['precio_envio'] = carrier_df['precio_envio'].fillna(0)
+
+    # Convert to s/IVA if needed (Shopify charges include IVA for domestic)
+    # For Spain: divide by 1.21; International: already 0% IVA
+    mask_spain = carrier_df['country'] == 'España'
+    carrier_df.loc[mask_spain, 'precio_envio'] = carrier_df.loc[mask_spain, 'precio_envio'] / 1.21
+
+    carrier_df['margin'] = carrier_df['precio_envio'] - carrier_df['cost_eur']
+    return carrier_df
