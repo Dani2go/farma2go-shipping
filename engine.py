@@ -9,7 +9,8 @@ import json
 import os
 from datetime import datetime
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+# Use STORAGE_PATH env var if set (Railway volume), else local /data folder
+DATA_DIR = os.environ.get('STORAGE_PATH', os.path.join(os.path.dirname(__file__), 'data'))
 os.makedirs(DATA_DIR, exist_ok=True)
 
 ALERT_THRESHOLD_EUR = 8.0   # flag shipment if loss > 8€ AND paid
