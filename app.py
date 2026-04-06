@@ -29,6 +29,27 @@ def clean_nan(obj):
     return obj
 
 
+def _seed_from_bundle():
+    """On first startup, decompress bundled .json.gz files into DATA_DIR."""
+    import gzip, shutil
+    bundle_dir = os.path.join(os.path.dirname(__file__), 'data_bundle')
+    if not os.path.isdir(bundle_dir):
+        return
+    for gz_file in os.listdir(bundle_dir):
+        if not gz_file.endswith('.json.gz'):
+            continue
+        dest = os.path.join(DATA_DIR, gz_file[:-3])  # strip .gz
+        if os.path.exists(dest):
+            continue  # already decompressed, skip
+        src = os.path.join(bundle_dir, gz_file)
+        print(f'Seeding {gz_file} → {dest}')
+        with gzip.open(src, 'rb') as f_in, open(dest, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+        print(f'  Done: {os.path.getsize(dest)/1024/1024:.1f}MB')
+
+_seed_from_bundle()
+
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
