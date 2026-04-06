@@ -16,6 +16,19 @@ from parsers import (parse_ctt, parse_inpost, parse_spring, parse_gls,
 from engine import save_data, load_data, list_saved, build_pnl, compute_shipping_margin, DATA_DIR
 from exporter import generate_pnl_excel, generate_reclamacion_csv
 
+import math
+
+def clean_nan(obj):
+    """Recursively replace float NaN/Inf with None so jsonify works."""
+    if isinstance(obj, dict):
+        return {k: clean_nan(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [clean_nan(i) for i in obj]
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return obj
+
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
@@ -878,7 +891,7 @@ def pnl():
     month = request.args.get('month', '').strip()
     month_filter = month if month else None
     result = build_pnl(month_filter)
-    return jsonify(result)
+    return jsonify(clean_nan(result))
 
 
 @app.route('/status')
@@ -948,10 +961,15 @@ def seed():
         for name in zf.namelist():
             if not name.endswith('.json'): continue
             key = name.replace('.json', '')
-            content = zf.read(name).decode('utf-8')
+            raw = zf.read(name).decode('utf-8')
+            # Fix NaN before saving (pandas may have written NaN instead of null)
+            import re as _re
+            raw = _re.sub(r':NaN\b', ':null', raw)
+            raw = _re.sub(r':Infinity\b', ':null', raw)
+            raw = _re.sub(r':-Infinity\b', ':null', raw)
             dest = os.path.join(DATA_DIR, name)
             with open(dest, 'w', encoding='utf-8') as f_out:
-                f_out.write(content)
+                f_out.write(raw)
             try:
                 import pandas as pd
                 df = pd.read_json(dest, orient='records')
