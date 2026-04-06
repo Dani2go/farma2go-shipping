@@ -13,7 +13,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(__file__))
 from parsers import (parse_ctt, parse_inpost, parse_spring, parse_gls,
                      parse_ups, parse_odoo_sales, parse_shopify_revenue, parse_google_ads)
-from engine import save_data, load_data, list_saved, build_pnl, compute_shipping_margin
+from engine import save_data, load_data, list_saved, build_pnl, compute_shipping_margin, DATA_DIR
 from exporter import generate_pnl_excel, generate_reclamacion_csv
 
 app = Flask(__name__)
