@@ -359,12 +359,12 @@ input[type=file] { display: none; }
   <div class="tab-panel active" id="panel-resumen">
     <div class="kpi-grid">
       <div class="kpi-card">
-        <div class="kpi-label">Margen final</div>
+        <div class="kpi-label">Margen post-Ads</div>
         <div class="kpi-val grn" id="kpi-mg">—</div>
-        <div class="kpi-sub">producto + envío</div>
+        <div class="kpi-sub" id="kpi-mg-sub">producto + envío − publicidad</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">% Margen</div>
+        <div class="kpi-label">% Margen post-Ads</div>
         <div class="kpi-val acc" id="kpi-pct">—</div>
         <div class="kpi-sub">sobre venta total</div>
       </div>
@@ -527,13 +527,17 @@ function renderPnl(data) {
   // KPIs
   if (data.pnl_by_country) {
     const R = data.pnl_by_country;
-    const mg   = R.reduce((a,r) => a+(r.mg_final||0), 0);
-    const vta  = R.reduce((a,r) => a+(r.venta||0), 0);
-    const inge = R.reduce((a,r) => a+(r.ing_envio||0), 0);
-    const cste = R.reduce((a,r) => a+(r.cost_envio||0), 0);
-    const pct  = (vta+inge) > 0 ? mg/(vta+inge) : null;
-    const mge  = inge - cste;
-    set('kpi-mg', fmtEur(mg,0), mg>=0?'grn':'red');
+    const mg     = R.reduce((a,r) => a+(r.mg_final||0), 0);
+    const mgPost = R.reduce((a,r) => a+(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0), 0);
+    const ads    = R.reduce((a,r) => a+(r.gasto_ads||0), 0);
+    const vta    = R.reduce((a,r) => a+(r.venta||0), 0);
+    const inge   = R.reduce((a,r) => a+(r.ing_envio||0), 0);
+    const cste   = R.reduce((a,r) => a+(r.cost_envio||0), 0);
+    const pct    = (vta+inge) > 0 ? mgPost/(vta+inge) : null;
+    const mge    = inge - cste;
+    set('kpi-mg', fmtEur(mgPost,0), mgPost>=0?'grn':'red');
+    const sub = document.getElementById('kpi-mg-sub');
+    if (sub && ads>0) sub.textContent = 'sin Ads (−' + Math.round(ads).toLocaleString('es-ES') + '€ publicidad)';
     set('kpi-pct', fmtPct(pct), pct&&pct>=0?'acc':'red');
     set('kpi-ship', fmtEur(mge,0), mge>=0?'grn':'red');
   } else if (data.country_shipping) {
@@ -609,20 +613,29 @@ function renderPaises(data) {
     Object.keys(byC[c]).forEach(k => byC[c][k]+=(r[k]||0));
   });
   const sorted = Object.entries(byC).sort((a,b) => b[1].venta-a[1].venta);
-  let tbl = `<table class="tbl"><thead><tr><th>País</th><th class="r">Pedidos</th><th class="r">Venta</th><th class="r">Mg Producto</th><th class="r">% Mg Prod</th><th class="r">Coste Envío</th><th class="r">Mg Envío</th><th class="r">Margen Final</th><th class="r">% Final</th></tr></thead><tbody>`;
+  // Also accumulate ads per country
+  const adsByC = {};
+  (data.pnl_by_country||[]).forEach(r => {
+    if (!adsByC[r.country]) adsByC[r.country]=0;
+    adsByC[r.country]+=(r.gasto_ads||0);
+  });
+  let tbl = `<table class="tbl"><thead><tr><th>País</th><th class="r">Pedidos</th><th class="r">Venta</th><th class="r">Mg Producto</th><th class="r">Mg Envío</th><th class="r">Margen Final</th><th class="r">Gasto Ads</th><th class="r">Post-Ads</th><th class="r">%</th></tr></thead><tbody>`;
   sorted.forEach(([c,d]) => {
-    const base=d.venta+d.ing_envio; const pct=base?d.mg_final/base:0; const pprod=d.venta?d.mg_prod/d.venta:0;
     const mge=d.ing_envio-d.cost_envio;
+    const ads=adsByC[c]||0;
+    const mpa=d.mg_final-ads;
+    const base=d.venta+d.ing_envio; const pct=base?mpa/base:0;
     tbl+=`<tr><td><strong>${c}</strong></td><td class="r dim">${fmtN(d.n_pedidos)}</td>
-      <td class="r">${fmtEur(d.venta,0)}</td><td class="r ${clsM(d.mg_prod)}">${fmtEur(d.mg_prod,0)}</td>
-      <td class="r ${clsM(pprod)}">${fmtPct(pprod)}</td>
-      <td class="r neg">${fmtEur(-d.cost_envio,0).replace('−','')}</td>
+      <td class="r">${fmtEur(d.venta,0)}</td>
+      <td class="r ${clsM(d.mg_prod)}">${fmtEur(d.mg_prod,0)}</td>
       <td class="r ${clsM(mge)}">${fmtEur(mge,0)}</td>
-      <td class="r ${clsM(d.mg_final)}"><strong>${fmtEur(d.mg_final,0)}</strong></td>
+      <td class="r ${clsM(d.mg_final)}">${fmtEur(d.mg_final,0)}</td>
+      <td class="r" style="color:var(--org)">${ads>0?fmtEur(-ads,0).replace('−',''):'—'}</td>
+      <td class="r ${clsM(mpa)}"><strong>${fmtEur(mpa,0)}</strong></td>
       <td class="r ${clsM(pct)}">${fmtPct(pct)}</td></tr>`;
   });
   tbl += '</tbody></table>';
-  document.getElementById('paises-content').innerHTML = card('Rentabilidad por País', '', tbl);
+  document.getElementById('paises-content').innerHTML = card('Rentabilidad por País — con Google Ads', '', tbl);
 }
 
 function renderCarriers(data) {
@@ -682,14 +695,15 @@ function renderEvolucion(data) {
     months.forEach(ym => {
       const r = d[ym];
       if (!r) { tbl += `<td class="r dim">—</td>`; return; }
-      const cls = r.mg_final >= 0 ? 'pos' : 'neg';
-      tbl += `<td class="r ${cls}">${fmtEur(r.mg_final,0)}</td>`;
+      const v = r.mg_post_ads != null ? r.mg_post_ads : r.mg_final;
+      const cls = v >= 0 ? 'pos' : 'neg';
+      tbl += `<td class="r ${cls}">${fmtEur(v,0)}</td>`;
     });
     const tc = tot >= 0 ? 'pos' : 'neg';
     tbl += `<td class="r ${tc}"><strong>${fmtEur(tot,0)}</strong></td></tr>`;
   });
   tbl += '</tbody></table>';
-  html += card('Margen Final € por País y Mes', '', tbl);
+  html += card('Margen post-Ads € por País y Mes', 'margen final − Google Ads', tbl);
 
   // % margin table
   let tbl2 = `<table class="tbl"><thead><tr><th>País</th>${MH.map(m=>`<th class="r">${m}</th>`).join('')}<th class="r">Media</th></tr></thead><tbody>`;

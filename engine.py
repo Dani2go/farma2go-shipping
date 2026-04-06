@@ -228,6 +228,29 @@ def build_pnl(ym_filter=None):
         results['ads'] = ads_summary.to_dict('records')
         results['total_ads'] = float(ads_df['coste'].sum())
 
+        # Integrate ads into P&L: subtract from pnl_by_country and monthly_by_country
+        # Build lookup: country × ym → gasto_ads
+        ads_lookup = {}
+        for _, row in ads_df.iterrows():
+            ads_lookup[(str(row['pais']), str(row['ym']))] = float(row.get('coste', 0) or 0)
+
+        if 'pnl_by_country' in results:
+            for row in results['pnl_by_country']:
+                gasto = ads_lookup.get((str(row.get('country','')), str(row.get('ym',''))), 0)
+                row['gasto_ads']   = round(gasto, 2)
+                row['mg_post_ads'] = round(float(row.get('mg_final', 0) or 0) - gasto, 2)
+                base = float(row.get('venta',0) or 0) + float(row.get('ing_envio',0) or 0)
+                row['mg_post_ads_pct'] = round(row['mg_post_ads'] / base, 4) if base else 0
+
+        if 'monthly_by_country' in results:
+            for country, months_data in results['monthly_by_country'].items():
+                for ym, row in months_data.items():
+                    gasto = ads_lookup.get((country, ym), 0)
+                    row['gasto_ads']   = round(gasto, 2)
+                    row['mg_post_ads'] = round(float(row.get('mg_final', 0) or 0) - gasto, 2)
+                    base = float(row.get('venta',0) or 0) + float(row.get('ing_envio',0) or 0)
+                    row['mg_post_ads_pct'] = round(row['mg_post_ads'] / base, 4) if base else 0
+
     # ── ALERTS ────────────────────────────────────────────────────
     if shipping_df is not None:
         alerts = shipping_df[
