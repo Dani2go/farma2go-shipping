@@ -207,6 +207,35 @@ header{background:var(--paper);border-bottom:1px solid var(--bdr);padding:0 28px
 .prog-bar{height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;width:180px}
 .prog-fill{height:100%;background:var(--acc);border-radius:2px;transition:width .3s;width:0%}
 
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.kpi-card-v2{background:var(--paper);border:1px solid var(--bdr);border-radius:var(--r);padding:18px 16px;box-shadow:var(--shadow);transition:transform .12s}
+.kpi-card-v2:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.kpi-label-v2{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);margin-bottom:8px;font-weight:500}
+.kpi-val-v2{font-family:var(--serif);font-size:26px;font-weight:700;line-height:1;letter-spacing:-.5px;margin-bottom:4px}
+.kpi-val-v2.grn{color:var(--grn)}.kpi-val-v2.red{color:var(--red)}.kpi-val-v2.org{color:var(--org)}.kpi-val-v2.acc{color:var(--acc)}
+.kpi-sub-v2{font-size:11px;color:var(--muted);line-height:1.4}
+.kpi-trend{font-size:10px;margin-top:5px;font-weight:500}.kpi-trend.up{color:var(--grn)}.kpi-trend.dn{color:var(--red)}
+
+/* ALERT STRIP */
+.alert-row-strip{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.alert-pill{padding:8px 14px;border-radius:var(--r);font-size:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.alert-pill.urgent{background:var(--red-lt);border:1px solid #e8b8b8;color:var(--red)}
+.alert-pill.warn{background:var(--yel-lt);border:1px solid #e0d080;color:var(--yel)}
+.alert-pill.info{background:var(--acc-lt);border:1px solid #b8d0e8;color:var(--acc)}
+.alert-pill-action{font-weight:500;margin-left:auto;white-space:nowrap;opacity:.8}
+
+/* CHARTS LAYOUT */
+.charts-row{display:grid;grid-template-columns:1fr 380px;gap:12px;margin-bottom:14px}
+.charts-col{display:flex;flex-direction:column;gap:12px}
+.chart-card{background:var(--paper);border:1px solid var(--bdr);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.chart-inner{padding:14px}
+.chart-wide{}
+
+/* P&L DETAIL */
+.pnl-detail-row{display:grid;grid-template-columns:1fr;gap:12px}
+.pnl-statement{background:var(--paper);border:1px solid var(--bdr);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+
 /* EMPTY */
 .empty{text-align:center;padding:52px 20px}
 .empty-icon{font-size:32px;opacity:.2;margin-bottom:12px}
@@ -430,136 +459,241 @@ function renderAll(data){
   renderAds(data);
 }
 
-// ── P&L TABLE ─────────────────────────────────────────────────
-function renderPnlTable(data){
-  const R=data.pnl_by_country||[];
-  if(!R.length){document.getElementById('pnl-content').innerHTML='';return;}
+// ── RESUMEN PRINCIPAL ─────────────────────────────────────────
+function renderPnlTable(data){ renderResumen(data); }
+function renderSemaphore(data){}   // absorbed into renderResumen
+function renderAlertStrip(data){}  // absorbed into renderResumen
 
-  const venta       =R.reduce((a,r)=>a+(r.venta||0),0);
-  const cogs        =R.reduce((a,r)=>a+(r.cogs||0),0);
-  const mg_prod     =R.reduce((a,r)=>a+(r.mg_prod||0),0);
-  const ing_env     =R.reduce((a,r)=>a+(r.ing_envio||0),0);
-  const cost_env    =R.reduce((a,r)=>a+(r.cost_envio||0),0);
-  const mg_env      =ing_env-cost_env;
-  const mg_final    =R.reduce((a,r)=>a+(r.mg_final||0),0);
-  const ads         =R.reduce((a,r)=>a+(r.gasto_ads||0),0);
-  const mg_post     =R.reduce((a,r)=>a+(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0),0);
-  const retail_media=R.reduce((a,r)=>a+(r.retail_media||0),0);
-  const inpost_comp =R.reduce((a,r)=>a+(r.inpost_comp||0),0);
-  const n_ped       =R.reduce((a,r)=>a+(r.n_pedidos||0),0);
-  const base        =venta+ing_env;
+function renderResumen(data){
+  const R = data.pnl_by_country||[];
+  if(!R.length){
+    document.getElementById('pnl-content').innerHTML='';
+    document.getElementById('semaphore').innerHTML='';
+    document.getElementById('alerts-strip').innerHTML='';
+    return;
+  }
+  document.getElementById('semaphore').innerHTML='';
+  document.getElementById('alerts-strip').innerHTML='';
 
-  const month=document.getElementById('global-month').value;
-  const label=month?month:'Acumulado';
+  // ── Global KPIs ───────────────────────────────────────────────
+  const venta      = R.reduce((a,r)=>a+(r.venta||0),0);
+  const cogs       = R.reduce((a,r)=>a+(r.cogs||0),0);
+  const mg_prod    = R.reduce((a,r)=>a+(r.mg_prod||0),0);
+  const ing_env    = R.reduce((a,r)=>a+(r.ing_envio||0),0);
+  const cost_env   = R.reduce((a,r)=>a+(r.cost_envio||0),0);
+  const mg_final   = R.reduce((a,r)=>a+(r.mg_final||0),0);
+  const ads        = R.reduce((a,r)=>a+(r.gasto_ads||0),0);
+  const retail     = R.reduce((a,r)=>a+(r.retail_media||0),0);
+  const inpost_c   = R.reduce((a,r)=>a+(r.inpost_comp||0),0);
+  const mg_post    = R.reduce((a,r)=>a+(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0),0);
+  const n_ped      = R.reduce((a,r)=>a+(r.n_pedidos||0),0);
+  const base       = venta + ing_env;
+  const ticket     = n_ped ? venta/n_ped : 0;
 
-  const html=`
-  <div class="card">
-    <div class="card-hdr"><span class="card-title">Cuenta de resultados — ${label}</span><span class="card-sub">${fn(n_ped)} pedidos</span></div>
-    <table class="pnl-table">
-      <colgroup><col style="width:55%"><col style="width:22%"><col style="width:23%"></colgroup>
-      <tr class="highlight"><td class="row-label section" colspan="3">INGRESOS</td></tr>
-      <tr><td class="row-label indent">Venta bruta productos</td><td class="val">${fe(venta,0)}</td><td class="val pct"></td></tr>
-      <tr><td class="row-label indent">Ingreso envío cobrado</td><td class="val">${fe(ing_env,0)}</td><td class="val pct"></td></tr>
-      <tr class="highlight"><td class="row-label section" colspan="3">COSTES</td></tr>
-      <tr><td class="row-label indent">Coste de mercancía (COGS)</td><td class="val neg">− ${fe(cogs,0)}</td><td class="val pct neg">${fp(cogs/venta)}</td></tr>
-      <tr class="separator"><td colspan="3"></td></tr>
-      <tr class="highlight"><td class="row-label total">Margen bruto producto</td><td class="val total ${cm(mg_prod)}">${fe(mg_prod,0)}</td><td class="val pct ${cm(mg_prod/venta)}">${fp(mg_prod/venta)}</td></tr>
-      <tr class="separator"><td colspan="3"></td></tr>
-      <tr><td class="row-label indent">Coste envío (carriers)</td><td class="val neg">− ${fe(cost_env,0)}</td><td class="val pct"></td></tr>
-      <tr class="separator"><td colspan="3"></td></tr>
-      <tr class="highlight"><td class="row-label total">Margen envío</td><td class="val total ${cm(mg_env)}">${fe(mg_env,0)}</td><td class="val pct ${cm(mg_env/base)}">${fp(mg_env/base)}</td></tr>
-      <tr class="separator"><td colspan="3"></td></tr>
-      <tr class="highlight" style="background:var(--acc-lt)"><td class="row-label total" style="color:var(--acc)">MARGEN OPERATIVO</td><td class="val total ${cm(mg_final)}" style="font-size:17px">${fe(mg_final,0)}</td><td class="val pct ${cm(mg_final/base)}" style="font-size:12px">${fp(mg_final/base)}</td></tr>
-      ${(retail_media>0||inpost_comp>0)?`
-      <tr><td class="row-label section" colspan="3">INGRESOS ADICIONALES</td></tr>
-      ${retail_media>0?`<tr><td class="row-label indent">Retail media (marcas)</td><td class="val pos">+ ${fe(retail_media,0)}</td><td class="val pct pos">${fp(retail_media/base)}</td></tr>`:''}
-      ${inpost_comp>0?`<tr><td class="row-label indent">Compensación InPost (Mondial Relay)</td><td class="val pos">+ ${fe(inpost_comp,0)}</td><td class="val pct pos">${fp(inpost_comp/base)}</td></tr>`:''}
-      `:''}
-      ${ads>0?`
-      <tr><td class="row-label section" colspan="3">MARKETING</td></tr>
-      <tr><td class="row-label indent">Google Ads</td><td class="val neg">− ${fe(ads,0)}</td><td class="val pct neg">${fp(ads/base)}</td></tr>
-      `:''}
-      ${(ads>0||retail_media>0||inpost_comp>0)?`
-      <tr class="separator"><td colspan="3"></td></tr>
-      <tr class="highlight" style="background:${mg_post>=0?'var(--grn-lt)':'var(--red-lt)'}"><td class="row-label total">RESULTADO FINAL</td><td class="val total ${cm(mg_post)}" style="font-size:17px">${fe(mg_post,0)}</td><td class="val pct ${cm(mg_post/base)}" style="font-size:12px">${fp(mg_post/base)}</td></tr>
-      `:''}
-    </table>
-  </div>`;
-  document.getElementById('pnl-content').innerHTML=html;
-}
+  // ── Monthly time series ───────────────────────────────────────
+  const months = data.all_months||[];
+  const monthly = {};
+  R.forEach(r=>{
+    const m=r.ym; if(!monthly[m]) monthly[m]={venta:0,mg_prod:0,mg_final:0,mg_post:0,ads:0,retail:0,inpost_c:0,n:0,cost_env:0,ing_env:0};
+    monthly[m].venta    += r.venta||0;
+    monthly[m].mg_prod  += r.mg_prod||0;
+    monthly[m].mg_final += r.mg_final||0;
+    monthly[m].mg_post  += r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0;
+    monthly[m].ads      += r.gasto_ads||0;
+    monthly[m].retail   += r.retail_media||0;
+    monthly[m].inpost_c += r.inpost_comp||0;
+    monthly[m].n        += r.n_pedidos||0;
+    monthly[m].cost_env += r.cost_envio||0;
+    monthly[m].ing_env  += r.ing_envio||0;
+  });
+  const mths = months.filter(m=>monthly[m]);
+  const MH   = mths.map(m=>m.replace('2025-','').replace('2026-',"'26-"));
 
-// ── SEMAPHORE ─────────────────────────────────────────────────
-function renderSemaphore(data){
-  const R=data.pnl_by_country||[];if(!R.length){document.getElementById('semaphore').innerHTML='';return;}
-  const COUNTRIES=['España','Portugal','Francia','Italia','Alemania','Reino Unido'];
+  // ── Country data ──────────────────────────────────────────────
+  const CTRS=['España','Portugal','Francia','Italia','Alemania','Reino Unido'];
   const byC={};
   R.forEach(r=>{
-    if(!byC[r.country])byC[r.country]={venta:0,mg_prod:0,ing_envio:0,cost_envio:0,mg_final:0,gasto_ads:0,mg_post_ads:0};
-    ['venta','mg_prod','ing_envio','cost_envio','mg_final','gasto_ads'].forEach(k=>byC[r.country][k]+=(r[k]||0));
-    byC[r.country].mg_post_ads+=(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0);
+    const c=r.country; if(!byC[c]) byC[c]={venta:0,mg_prod:0,mg_final:0,mg_post:0,ads:0,n:0};
+    byC[c].venta    += r.venta||0;
+    byC[c].mg_prod  += r.mg_prod||0;
+    byC[c].mg_final += r.mg_final||0;
+    byC[c].mg_post  += r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0;
+    byC[c].ads      += r.gasto_ads||0;
+    byC[c].n        += r.n_pedidos||0;
   });
-  const cards=COUNTRIES.filter(c=>byC[c]&&byC[c].venta>0).map(c=>{
-    const d=byC[c];
-    const base=d.venta+d.ing_envio;
-    const pp=d.venta?d.mg_prod/d.venta:0;
-    const pe=base?(d.ing_envio-d.cost_envio)/base:0;
-    const pa=base?d.mg_post_ads/base:0;
-    const overall=pa>0.08?'grn':pa>0.02?'yel':'red';
-    const mv=(v,thr1,thr2)=>v>thr1?'pos':v>thr2?'warn':'neg';
-    return `<div class="sem-card ${overall}">
-      <div class="sem-country">${c}</div>
-      <div class="sem-metrics">
-        <div class="sem-m"><div class="sem-m-label">Mg Prod</div><div class="sem-m-val ${mv(pp,.15,.08)}">${fp(pp)}</div></div>
-        <div class="sem-m"><div class="sem-m-label">Mg Envío</div><div class="sem-m-val ${mv(pe,.02,0)}">${fp(pe)}</div></div>
-        <div class="sem-m"><div class="sem-m-label">Post-Ads</div><div class="sem-m-val ${mv(pa,.08,.02)}">${fp(pa)}</div></div>
+
+  // ── KPI Cards ─────────────────────────────────────────────────
+  function kpiCard(label, value, fmt, sub, trend, color){
+    const cls = color||'';
+    const trendHtml = trend!=null ? `<div class="kpi-trend ${trend>=0?'up':'dn'}">${trend>=0?'↑':'↓'} ${Math.abs(trend).toFixed(1)}% vs mes ant.</div>` : '';
+    return `<div class="kpi-card-v2">
+      <div class="kpi-label-v2">${label}</div>
+      <div class="kpi-val-v2 ${cls}">${fmt(value)}</div>
+      <div class="kpi-sub-v2">${sub}</div>
+      ${trendHtml}
+    </div>`;
+  }
+
+  // Trend: last month vs previous month
+  const lastM  = mths[mths.length-1];
+  const prevM  = mths[mths.length-2];
+  const last   = monthly[lastM]||{};
+  const prev   = monthly[prevM]||{};
+  const trendPost = prev.mg_post ? (last.mg_post-prev.mg_post)/Math.abs(prev.mg_post)*100 : null;
+  const trendVenta= prev.venta   ? (last.venta-prev.venta)/Math.abs(prev.venta)*100 : null;
+
+  const kpiHtml = `<div class="kpi-row">
+    ${kpiCard('Resultado final', mg_post, v=>fe(v,0), `${fp(mg_post/base)} sobre venta`, trendPost, mg_post>=0?'grn':'red')}
+    ${kpiCard('Venta bruta', venta, v=>fe(v,0), `${fn(n_ped)} pedidos · ticket ${fe(ticket,0)}`, trendVenta, '')}
+    ${kpiCard('Margen producto', mg_prod, v=>fe(v,0), fp(mg_prod/venta)+' s/venta', null, mg_prod>=0?'grn':'red')}
+    ${kpiCard('Google Ads', -ads, v=>fe(-v,0), `${fp(ads/base)} s/venta · ROAS ${(venta/ads).toFixed(1)}x`, null, 'org')}
+    ${kpiCard('Retail media', retail+inpost_c, v=>fe(v,0), `Marcas ${fe(retail,0)} + InPost ${fe(inpost_c,0)}`, null, 'acc')}
+  </div>`;
+
+  // ── Chart 1: Evolución mensual (línea resultado + barras venta) ─
+  const CW=680; const CH=200; const PAD={t:20,r:20,b:40,l:60};
+  const plotW=CW-PAD.l-PAD.r; const plotH=CH-PAD.t-PAD.b;
+  const maxVenta=Math.max(...mths.map(m=>monthly[m].venta));
+  const minPost=Math.min(...mths.map(m=>monthly[m].mg_post),0);
+  const maxPost=Math.max(...mths.map(m=>monthly[m].mg_post),1);
+  const rangePost=maxPost-minPost||1;
+  const xS=i=>PAD.l+i*(plotW/(mths.length-1||1));
+  const yVenta=v=>PAD.t+plotH-(v/maxVenta)*plotH;
+  const yPost=v=>PAD.t+plotH-((v-minPost)/rangePost)*plotH;
+
+  // Bars for venta
+  let bars1=''; const bw=Math.max(4, plotW/mths.length*0.5);
+  mths.forEach((m,i)=>{
+    const v=monthly[m].venta; const h=(v/maxVenta)*plotH;
+    bars1+=`<rect x="${xS(i)-bw/2}" y="${PAD.t+plotH-h}" width="${bw}" height="${h}" fill="#e8f0f9" rx="2"/>`;
+  });
+  // Line for mg_post
+  let linePts=mths.map((m,i)=>`${xS(i)},${yPost(monthly[m].mg_post)}`).join(' ');
+  let lineAds=mths.map((m,i)=>`${xS(i)},${yPost(monthly[m].mg_post+monthly[m].ads)}`).join(' ');
+  // Zero line for post
+  const zeroY=yPost(0);
+  let xLabels=MH.map((l,i)=>`<text x="${xS(i)}" y="${CH-8}" text-anchor="middle" font-size="9" fill="#9a8f84">${l}</text>`).join('');
+  // Y axis labels
+  const yTicks=[0,maxPost/2,maxPost].map(v=>`<text x="${PAD.l-5}" y="${yPost(v)+4}" text-anchor="end" font-size="8" fill="#9a8f84">${Math.round(v/1000)}k</text>`).join('');
+
+  const svg1=`<svg width="100%" viewBox="0 0 ${CW} ${CH}" xmlns="http://www.w3.org/2000/svg" style="font-family:'DM Sans',sans-serif;overflow:visible">
+    ${bars1}
+    <line x1="${PAD.l}" y1="${zeroY}" x2="${PAD.l+plotW}" y2="${zeroY}" stroke="#e4dfd8" stroke-width="1" stroke-dasharray="4,3"/>
+    <polyline points="${lineAds}" fill="none" stroke="#fef4ec" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+    <polyline points="${linePts}" fill="none" stroke="#1e4d7b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${mths.map((m,i)=>`<circle cx="${xS(i)}" cy="${yPost(monthly[m].mg_post)}" r="3" fill="#1e4d7b"/>`).join('')}
+    ${xLabels}${yTicks}
+    <text x="${PAD.l}" y="14" font-size="11" font-weight="600" fill="#1a1714">Resultado final mensual</text>
+    <text x="${PAD.l+plotW}" y="14" text-anchor="end" font-size="9" fill="#9a8f84">barras = venta · línea = resultado post-Ads</text>
+  </svg>`;
+
+  // ── Chart 2: Desglose del resultado (waterfall simple) ────────
+  const WW=400; const WH=220; const WPAD={t:30,r:20,b:30,l:120};
+  const wPlotW=WW-WPAD.l-WPAD.r; const wPlotH=WH-WPAD.t-WPAD.b;
+  const items=[
+    {label:'Venta bruta',    v:venta,       color:'#1e4d7b', positive:true},
+    {label:'− COGS',         v:-cogs,       color:'#b93535', positive:false},
+    {label:'+ Retail media', v:retail,      color:'#2a7a4b', positive:true},
+    {label:'Mg envío',       v:ing_env-cost_env, color:(ing_env-cost_env)>=0?'#2a7a4b':'#b93535', positive:(ing_env-cost_env)>=0},
+    {label:'+ InPost comp',  v:inpost_c,    color:'#2a7a4b', positive:true},
+    {label:'− Google Ads',   v:-ads,        color:'#b85c0a', positive:false},
+    {label:'Resultado',      v:mg_post,     color:mg_post>=0?'#2a7a4b':'#b93535', positive:mg_post>=0, bold:true},
+  ].filter(it=>Math.abs(it.v)>100);
+
+  const maxAbs=Math.max(...items.map(it=>Math.abs(it.v)));
+  const barH=Math.floor(wPlotH/items.length)-4;
+  let wBars='';
+  items.forEach((it,i)=>{
+    const y=WPAD.t+i*(barH+4);
+    const w=Math.round((Math.abs(it.v)/maxAbs)*wPlotW*0.85);
+    const x=WPAD.l;
+    wBars+=`<rect x="${x}" y="${y}" width="${w}" height="${barH}" fill="${it.color}" rx="3" opacity="${it.bold?1:0.75}"/>`;
+    wBars+=`<text x="${x-5}" y="${y+barH/2+4}" text-anchor="end" font-size="${it.bold?10:9}" fill="${it.bold?'#1a1714':'#5a524a'}" font-weight="${it.bold?'700':'400'}">${it.label}</text>`;
+    wBars+=`<text x="${x+w+5}" y="${y+barH/2+4}" font-size="${it.bold?10:9}" fill="${it.color}" font-weight="${it.bold?'700':'400'}">${fe(it.v,0)}</text>`;
+  });
+  const svg2=`<svg width="100%" viewBox="0 0 ${WW} ${WH}" xmlns="http://www.w3.org/2000/svg" style="font-family:'DM Sans',sans-serif">
+    ${wBars}
+    <text x="${WPAD.l}" y="18" font-size="11" font-weight="600" fill="#1a1714">Desglose del resultado</text>
+  </svg>`;
+
+  // ── Chart 3: Países (barras horizontales por resultado post-ads) ─
+  const PW=360; const PH=220; const PPAD={t:30,r:80,b:20,l:90};
+  const ctrData=CTRS.filter(c=>byC[c]&&byC[c].venta>500).map(c=>({c,d:byC[c]}));
+  const maxCtrPost=Math.max(...ctrData.map(x=>Math.abs(x.d.mg_post)),1);
+  const ctrBarH=Math.floor((PH-PPAD.t-PPAD.b)/ctrData.length)-4;
+  let pBars='';
+  ctrData.forEach(({c,d},i)=>{
+    const y=PPAD.t+i*(ctrBarH+4);
+    const w=Math.round((Math.abs(d.mg_post)/maxCtrPost)*(PW-PPAD.l-PPAD.r));
+    const color=d.mg_post>=0?'#2a7a4b':'#b93535';
+    const pct=d.venta?(d.mg_post/d.venta*100).toFixed(1):'0';
+    pBars+=`<rect x="${PPAD.l}" y="${y}" width="${Math.max(w,2)}" height="${ctrBarH}" fill="${color}" rx="3" opacity="0.8"/>`;
+    pBars+=`<text x="${PPAD.l-5}" y="${y+ctrBarH/2+4}" text-anchor="end" font-size="10" fill="#5a524a">${c}</text>`;
+    pBars+=`<text x="${PPAD.l+w+5}" y="${y+ctrBarH/2+4}" font-size="9" fill="${color}">${fe(d.mg_post,0)} <tspan fill="#9a8f84">${pct}%</tspan></text>`;
+  });
+  const svg3=`<svg width="100%" viewBox="0 0 ${PW} ${PH}" xmlns="http://www.w3.org/2000/svg" style="font-family:'DM Sans',sans-serif">
+    ${pBars}
+    <text x="${PPAD.l}" y="18" font-size="11" font-weight="600" fill="#1a1714">Por país — post-Ads</text>
+  </svg>`;
+
+  // ── Alert strip ────────────────────────────────────────────────
+  const alerts=[];
+  const CTRS_ALL=['España','Portugal','Francia','Italia','Alemania','Reino Unido'];
+  CTRS_ALL.forEach(c=>{
+    if(!byC[c]||byC[c].venta<2000) return;
+    const pct=byC[c].mg_post/byC[c].venta;
+    if(pct<0) alerts.push({icon:'🔴',text:`<strong>${c}</strong> en negativo post-Ads: ${fe(byC[c].mg_post,0)} (${fp(pct)})`,action:`Revisar inversión publicitaria en ${c}`,cls:'urgent'});
+    else if(pct<0.03) alerts.push({icon:'🟡',text:`<strong>${c}</strong> margen muy ajustado: ${fp(pct)}`,action:'Monitorizar de cerca',cls:'warn'});
+  });
+  if(data.alert_count>0) alerts.push({icon:'⚠️',text:`${fn(data.alert_count)} envíos con coste anormal · pérdida ${fe(data.alert_total_loss||0,0)}`,action:'Ver pestaña Reclamaciones',cls:'info'});
+  const alertHtml=alerts.length?`<div class="alert-row-strip">${alerts.slice(0,3).map(a=>`<div class="alert-pill ${a.cls}">${a.icon} ${a.text} <span class="alert-pill-action">→ ${a.action}</span></div>`).join('')}</div>`:'';
+
+  // ── Compose ───────────────────────────────────────────────────
+  document.getElementById('pnl-content').innerHTML = `
+    ${kpiHtml}
+    ${alertHtml}
+    <div class="charts-row">
+      <div class="chart-card chart-wide">
+        <div class="chart-inner">${svg1}</div>
+      </div>
+      <div class="charts-col">
+        <div class="chart-card"><div class="chart-inner">${svg2}</div></div>
+        <div class="chart-card"><div class="chart-inner">${svg3}</div></div>
+      </div>
+    </div>
+    <div class="pnl-detail-row">
+      <div class="pnl-statement">
+        <table class="pnl-table">
+          <colgroup><col style="width:52%"><col style="width:24%"><col style="width:24%"></colgroup>
+          <tr class="highlight"><td class="row-label section" colspan="3">INGRESOS</td></tr>
+          <tr><td class="row-label indent">Venta bruta productos</td><td class="val">${fe(venta,0)}</td><td class="val pct"></td></tr>
+          <tr><td class="row-label indent">Ingreso envío cobrado</td><td class="val">${fe(ing_env,0)}</td><td class="val pct"></td></tr>
+          <tr class="highlight"><td class="row-label section" colspan="3">COSTES</td></tr>
+          <tr><td class="row-label indent">COGS</td><td class="val neg">− ${fe(cogs,0)}</td><td class="val pct neg">${fp(cogs/venta)}</td></tr>
+          <tr class="separator"><td colspan="3"></td></tr>
+          <tr class="highlight"><td class="row-label total">Margen bruto producto</td><td class="val total ${cm(mg_prod)}">${fe(mg_prod,0)}</td><td class="val pct ${cm(mg_prod/venta)}">${fp(mg_prod/venta)}</td></tr>
+          <tr class="separator"><td colspan="3"></td></tr>
+          <tr><td class="row-label indent">Coste envío (carriers)</td><td class="val neg">− ${fe(cost_env,0)}</td><td class="val pct"></td></tr>
+          <tr class="separator"><td colspan="3"></td></tr>
+          <tr class="highlight" style="background:var(--acc-lt)"><td class="row-label total" style="color:var(--acc)">MARGEN OPERATIVO</td><td class="val total ${cm(mg_final)}">${fe(mg_final,0)}</td><td class="val pct ${cm(mg_final/base)}">${fp(mg_final/base)}</td></tr>
+          ${retail>0||inpost_c>0?`
+          <tr><td class="row-label section" colspan="3">INGRESOS ADICIONALES</td></tr>
+          ${retail>0?`<tr><td class="row-label indent">Retail media (marcas)</td><td class="val pos">+ ${fe(retail,0)}</td><td class="val pct pos">${fp(retail/base)}</td></tr>`:''}
+          ${inpost_c>0?`<tr><td class="row-label indent">Compensación InPost</td><td class="val pos">+ ${fe(inpost_c,0)}</td><td class="val pct pos">${fp(inpost_c/base)}</td></tr>`:''}
+          `:''}
+          ${ads>0?`
+          <tr><td class="row-label section" colspan="3">MARKETING</td></tr>
+          <tr><td class="row-label indent">Google Ads</td><td class="val neg">− ${fe(ads,0)}</td><td class="val pct neg">${fp(ads/base)}</td></tr>
+          `:''}
+          <tr class="separator"><td colspan="3"></td></tr>
+          <tr class="highlight" style="background:${mg_post>=0?'var(--grn-lt)':'var(--red-lt)'}">
+            <td class="row-label total">RESULTADO FINAL</td>
+            <td class="val total ${cm(mg_post)}" style="font-size:17px">${fe(mg_post,0)}</td>
+            <td class="val pct ${cm(mg_post/base)}" style="font-size:12px">${fp(mg_post/base)}</td>
+          </tr>
+        </table>
       </div>
     </div>`;
-  }).join('');
-  document.getElementById('semaphore').innerHTML=`<div class="semaphore-grid" style="margin-bottom:16px">${cards}</div>`;
-}
-
-// ── ALERT STRIP ────────────────────────────────────────────────
-function renderAlertStrip(data){
-  const R=data.pnl_by_country||[];
-  const ship=data.shipping||[];
-  const ads=data.ads||[];
-  const alerts=[];
-
-  // Alert: country losing money post-ads
-  const byC={};
-  R.forEach(r=>{
-    if(!byC[r.country])byC[r.country]={mg_post_ads:0,venta:0,ing_envio:0,gasto_ads:0};
-    byC[r.country].mg_post_ads+=(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0);
-    byC[r.country].venta+=(r.venta||0);byC[r.country].ing_envio+=(r.ing_envio||0);
-    byC[r.country].gasto_ads+=(r.gasto_ads||0);
-  });
-  Object.entries(byC).forEach(([c,d])=>{
-    const base=d.venta+d.ing_envio;const pct=base?d.mg_post_ads/base:0;
-    if(d.venta>5000&&pct<0)alerts.push({type:'urgent',icon:'🔴',title:`${c}: resultado negativo después de Ads`,desc:`Margen post-Ads ${fp(pct)} (${fe(d.mg_post_ads,0)}). Los Ads cuestan ${fe(d.gasto_ads,0)}.`,action:`Reducir inversión en Ads o revisar precio de envío en ${c}`,cls:'red'});
-    else if(d.venta>5000&&pct<0.03)alerts.push({type:'warn',icon:'🟡',title:`${c}: margen muy ajustado post-Ads`,desc:`Solo un ${fp(pct)} de margen final. Cualquier subida de costes lo pondría en negativo.`,action:`Revisar estructura de costes en ${c}`,cls:'org'});
-  });
-
-  // Alert: carrier losing big
-  const byCarrier={};
-  ship.forEach(r=>{if(!byCarrier[r.carrier])byCarrier[r.carrier]={mg:0,n:0};byCarrier[r.carrier].mg+=(r.margen_envio||0);byCarrier[r.carrier].n+=(r.n_envios||0);});
-  Object.entries(byCarrier).forEach(([c,d])=>{
-    if(d.mg<-5000)alerts.push({type:'warn',icon:'📦',title:`${c}: −${Math.round(Math.abs(d.mg)).toLocaleString('es-ES')}€ en envíos`,desc:`${fn(d.n)} envíos con margen negativo acumulado. Coste real superior al precio contratado.`,action:'Revisar tarifas con el carrier o ajustar precios cobrados',cls:'org'});
-  });
-
-  // Alert: reclamaciones
-  if(data.alert_count>0)alerts.push({type:'info',icon:'⚠️',title:`${fn(data.alert_count)} envíos para reclamar`,desc:`Pérdida total de ${fe(data.alert_total_loss||0,0)} en envíos donde el coste supera 3× lo cobrado.`,action:'Revisar envíos con pérdida anormal',cls:'acc'});
-
-  if(!alerts.length){document.getElementById('alerts-strip').innerHTML='';return;}
-  const html=alerts.slice(0,4).map(a=>`
-    <div class="alert-card ${a.type}">
-      <div class="alert-icon">${a.icon}</div>
-      <div class="alert-body">
-        <div class="alert-title">${a.title}</div>
-        <div class="alert-desc">${a.desc}</div>
-        <div class="alert-action ${a.cls}">→ ${a.action}</div>
-      </div>
-    </div>`).join('');
-  document.getElementById('alerts-strip').innerHTML=`<div class="alert-cards">${html}</div>`;
 }
 
 // ── POR PAÍS ──────────────────────────────────────────────────
