@@ -428,17 +428,19 @@ function renderPnlTable(data){
   const R=data.pnl_by_country||[];
   if(!R.length){document.getElementById('pnl-content').innerHTML='';return;}
 
-  const venta    =R.reduce((a,r)=>a+(r.venta||0),0);
-  const cogs     =R.reduce((a,r)=>a+(r.cogs||0),0);
-  const mg_prod  =R.reduce((a,r)=>a+(r.mg_prod||0),0);
-  const ing_env  =R.reduce((a,r)=>a+(r.ing_envio||0),0);
-  const cost_env =R.reduce((a,r)=>a+(r.cost_envio||0),0);
-  const mg_env   =ing_env-cost_env;
-  const mg_final =R.reduce((a,r)=>a+(r.mg_final||0),0);
-  const ads      =R.reduce((a,r)=>a+(r.gasto_ads||0),0);
-  const mg_post  =R.reduce((a,r)=>a+(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0),0);
-  const n_ped    =R.reduce((a,r)=>a+(r.n_pedidos||0),0);
-  const base     =venta+ing_env;
+  const venta       =R.reduce((a,r)=>a+(r.venta||0),0);
+  const cogs        =R.reduce((a,r)=>a+(r.cogs||0),0);
+  const mg_prod     =R.reduce((a,r)=>a+(r.mg_prod||0),0);
+  const ing_env     =R.reduce((a,r)=>a+(r.ing_envio||0),0);
+  const cost_env    =R.reduce((a,r)=>a+(r.cost_envio||0),0);
+  const mg_env      =ing_env-cost_env;
+  const mg_final    =R.reduce((a,r)=>a+(r.mg_final||0),0);
+  const ads         =R.reduce((a,r)=>a+(r.gasto_ads||0),0);
+  const mg_post     =R.reduce((a,r)=>a+(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0),0);
+  const retail_media=R.reduce((a,r)=>a+(r.retail_media||0),0);
+  const inpost_comp =R.reduce((a,r)=>a+(r.inpost_comp||0),0);
+  const n_ped       =R.reduce((a,r)=>a+(r.n_pedidos||0),0);
+  const base        =venta+ing_env;
 
   const month=document.getElementById('global-month').value;
   const label=month?month:'Acumulado';
@@ -461,9 +463,16 @@ function renderPnlTable(data){
       <tr class="highlight"><td class="row-label total">Margen envío</td><td class="val total ${cm(mg_env)}">${fe(mg_env,0)}</td><td class="val pct ${cm(mg_env/base)}">${fp(mg_env/base)}</td></tr>
       <tr class="separator"><td colspan="3"></td></tr>
       <tr class="highlight" style="background:var(--acc-lt)"><td class="row-label total" style="color:var(--acc)">MARGEN OPERATIVO</td><td class="val total ${cm(mg_final)}" style="font-size:17px">${fe(mg_final,0)}</td><td class="val pct ${cm(mg_final/base)}" style="font-size:12px">${fp(mg_final/base)}</td></tr>
+      ${(retail_media>0||inpost_comp>0)?`
+      <tr><td class="row-label section" colspan="3">INGRESOS ADICIONALES</td></tr>
+      ${retail_media>0?`<tr><td class="row-label indent">Retail media (marcas)</td><td class="val pos">+ ${fe(retail_media,0)}</td><td class="val pct pos">${fp(retail_media/base)}</td></tr>`:''}
+      ${inpost_comp>0?`<tr><td class="row-label indent">Compensación InPost (Mondial Relay)</td><td class="val pos">+ ${fe(inpost_comp,0)}</td><td class="val pct pos">${fp(inpost_comp/base)}</td></tr>`:''}
+      `:''}
       ${ads>0?`
       <tr><td class="row-label section" colspan="3">MARKETING</td></tr>
       <tr><td class="row-label indent">Google Ads</td><td class="val neg">− ${fe(ads,0)}</td><td class="val pct neg">${fp(ads/base)}</td></tr>
+      `:''}
+      ${(ads>0||retail_media>0||inpost_comp>0)?`
       <tr class="separator"><td colspan="3"></td></tr>
       <tr class="highlight" style="background:${mg_post>=0?'var(--grn-lt)':'var(--red-lt)'}"><td class="row-label total">RESULTADO FINAL</td><td class="val total ${cm(mg_post)}" style="font-size:17px">${fe(mg_post,0)}</td><td class="val pct ${cm(mg_post/base)}" style="font-size:12px">${fp(mg_post/base)}</td></tr>
       `:''}

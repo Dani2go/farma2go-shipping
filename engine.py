@@ -47,10 +47,14 @@ def load_data(key):
     if not os.path.exists(path):
         return None
     try:
-        return pd.read_json(path, orient='records')
-    except:
         with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            raw = json.load(f)
+        # If it's a list of records → DataFrame; if dict → return as dict
+        if isinstance(raw, list):
+            return pd.DataFrame(raw)
+        return raw  # dict (e.g. retail_media, shopify_revenue)
+    except Exception:
+        return None
 
 
 def list_saved():
@@ -77,12 +81,33 @@ def build_pnl(ym_filter=None):
     Returns dict with pnl_by_country, pnl_by_carrier, alerts, summary.
     """
     # Load all available data
-    shipping_df = load_data('shipping_costs')   # carrier invoices
-    sales_df    = load_data('odoo_sales')        # Odoo order lines
-    ads_df      = load_data('google_ads')        # Ads spend
+    shipping_df  = load_data('shipping_costs')   # carrier invoices
+    sales_df     = load_data('odoo_sales')        # Odoo order lines
+    ads_df       = load_data('google_ads')        # Ads spend
+    retail_raw   = load_data('retail_media')      # Retail media income + InPost compensation
+
+    # Parse retail_media (stored as dict, not DataFrame)
+    retail_media_by_ym      = {}  # ym → retail media income
+    inpost_comp_by_ym       = {}  # ym → InPost/Mondial compensation
+    if isinstance(retail_raw, dict):
+        retail_media_by_ym  = retail_raw.get('retail_media', {})
+        inpost_comp_by_ym   = retail_raw.get('inpost_compensacion', {})
+    elif retail_raw is not None and hasattr(retail_raw, 'iterrows'):
+        # fallback if loaded as dataframe
+        pass
 
     if shipping_df is None and sales_df is None:
         return {'error': 'No hay datos cargados. Sube al menos las facturas de transportistas o el listado de ventas de Odoo.'}
+
+    # Exclude 2024 — incomplete data
+    for df_name, df_obj in [('shipping_df', shipping_df), ('sales_df', sales_df), ('ads_df', ads_df)]:
+        pass  # done per-df below
+    if shipping_df is not None:
+        shipping_df = shipping_df[~shipping_df['ym'].astype(str).str.startswith('2024')]
+    if sales_df is not None:
+        sales_df = sales_df[~sales_df['ym'].astype(str).str.startswith('2024')]
+    if ads_df is not None:
+        ads_df = ads_df[~ads_df['ym'].astype(str).str.startswith('2024')]
 
     results = {}
 
@@ -266,6 +291,45 @@ def build_pnl(ym_filter=None):
                     row['mg_post_ads'] = round(float(row.get('mg_final', 0) or 0) - gasto, 2)
                     base = float(row.get('venta',0) or 0) + float(row.get('ing_envio',0) or 0)
                     row['mg_post_ads_pct'] = round(row['mg_post_ads'] / base, 4) if base else 0
+
+    # ── RETAIL MEDIA & INPOST COMPENSATION ──────────────────────
+    # retail_media: income from brand partnerships → improves product margin
+    # inpost_compensacion: Mondial Relay pays us for InPost losses → improves shipping margin
+    if retail_media_by_ym or inpost_comp_by_ym:
+        # Add to pnl_by_country (distributed proportionally by country sales if multiple countries)
+        # Simplification: assign 100% to España (all retail media is domestic)
+        if 'pnl_by_country' in results:
+            for row in results['pnl_by_country']:
+                ym = str(row.get('ym',''))
+                if row.get('country') == 'España':
+                    rm  = float(retail_media_by_ym.get(ym, 0) or 0)
+                    ipc = float(inpost_comp_by_ym.get(ym, 0) or 0)
+                    row['retail_media']       = round(rm, 2)
+                    row['inpost_comp']        = round(ipc, 2)
+                    row['mg_prod']            = round((row.get('mg_prod') or 0) + rm, 2)
+                    row['mg_final']           = round((row.get('mg_final') or 0) + rm + ipc, 2)
+                    row['mg_post_ads']        = round((row.get('mg_post_ads') or row.get('mg_final') or 0) + rm + ipc, 2)
+                    base = float(row.get('venta',0) or 0) + float(row.get('ing_envio',0) or 0)
+                    row['mg_post_ads_pct']    = round(row['mg_post_ads'] / base, 4) if base else 0
+                else:
+                    row['retail_media'] = 0; row['inpost_comp'] = 0
+
+        if 'monthly_by_country' in results:
+            for country, months_data in results['monthly_by_country'].items():
+                if country != 'España': continue
+                for ym, row in months_data.items():
+                    rm  = float(retail_media_by_ym.get(ym, 0) or 0)
+                    ipc = float(inpost_comp_by_ym.get(ym, 0) or 0)
+                    row['retail_media']  = round(rm, 2)
+                    row['inpost_comp']   = round(ipc, 2)
+                    row['mg_prod']       = round((row.get('mg_prod') or 0) + rm, 2)
+                    row['mg_final']      = round((row.get('mg_final') or 0) + rm + ipc, 2)
+                    row['mg_post_ads']   = round((row.get('mg_post_ads') or row.get('mg_final') or 0) + rm + ipc, 2)
+                    base = float(row.get('venta',0) or 0) + float(row.get('ing_envio',0) or 0)
+                    row['mg_post_ads_pct'] = round(row['mg_post_ads'] / base, 4) if base else 0
+
+        results['total_retail_media']  = round(sum(float(v or 0) for v in retail_media_by_ym.values()), 2)
+        results['total_inpost_comp']   = round(sum(float(v or 0) for v in inpost_comp_by_ym.values()), 2)
 
     # ── ALERTS ────────────────────────────────────────────────────
     if shipping_df is not None:
