@@ -240,7 +240,6 @@ input[type=file]{display:none}
     </div>
     <button class="btn btn-primary" onclick="loadPnl()">Calcular P&L</button>
     <button class="btn btn-grn" onclick="exportExcel()">↓ Excel</button>
-    <button class="btn btn-red" id="btn-rec" onclick="exportReclamaciones()" style="display:none">Reclamar</button>
   </div>
 </header>
 
@@ -280,7 +279,6 @@ input[type=file]{display:none}
     <button class="tab" onclick="setTab('evolucion')">Evolución</button>
     <button class="tab" onclick="setTab('comparar')">Comparar</button>
     <button class="tab" onclick="setTab('carriers')">Carriers</button>
-    <button class="tab" onclick="setTab('alertas')">Reclamaciones</button>
     <button class="tab" onclick="setTab('ads')">Google Ads</button>
   </div>
 
@@ -321,9 +319,6 @@ input[type=file]{display:none}
   </div>
 
   <!-- RECLAMACIONES -->
-  <div class="tab-panel" id="panel-alertas">
-    <div id="alertas-content"><div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Sin alertas detectadas</div><div class="empty-sub">Las alertas aparecen cuando el coste supera 3× lo cobrado y la pérdida es mayor de 8€</div></div></div>
-  </div>
 
   <!-- ADS -->
   <div class="tab-panel" id="panel-ads">
@@ -425,7 +420,6 @@ function renderAll(data){
   renderPaises(data);
   renderEvolucion(data);
   renderCarriers(data);
-  renderAlertas(data);
   renderAds(data);
 }
 
@@ -537,7 +531,7 @@ function renderAlertStrip(data){
   });
 
   // Alert: reclamaciones
-  if(data.alert_count>0)alerts.push({type:'info',icon:'⚠️',title:`${fn(data.alert_count)} envíos para reclamar`,desc:`Pérdida total de ${fe(data.alert_total_loss||0,0)} en envíos donde el coste supera 3× lo cobrado.`,action:'Ver pestaña Reclamaciones y descargar CSV',cls:'acc'});
+  if(data.alert_count>0)alerts.push({type:'info',icon:'⚠️',title:`${fn(data.alert_count)} envíos para reclamar`,desc:`Pérdida total de ${fe(data.alert_total_loss||0,0)} en envíos donde el coste supera 3× lo cobrado.`,action:'Revisar envíos con pérdida anormal',cls:'acc'});
 
   if(!alerts.length){document.getElementById('alerts-strip').innerHTML='';return;}
   const html=alerts.slice(0,4).map(a=>`
@@ -713,19 +707,6 @@ function renderCarriers(data){
   document.getElementById('carriers-content').innerHTML=`<div class="card"><div class="card-hdr"><span class="card-title">Margen por Carrier</span></div><div style="overflow-x:auto">${t}</div></div>`;
 }
 
-// ── RECLAMACIONES ─────────────────────────────────────────────
-function renderAlertas(data){
-  const alerts=data.alerts;if(!alerts||!alerts.length)return;
-  let t=`<table class="tbl"><thead><tr><th>Ref Pedido</th><th>Carrier</th><th>País</th><th class="r">Peso kg</th><th class="r">Cobrado</th><th class="r">Coste</th><th class="r">Pérdida</th><th class="r">Ratio</th></tr></thead><tbody>`;
-  alerts.slice(0,200).forEach(a=>{
-    const ratio=a.precio_envio>0?Math.abs(a.cost_eur/a.precio_envio):null;
-    t+=`<tr><td><strong>${a.ref}</strong></td><td>${a.carrier}</td><td>${a.country||'—'}</td><td class="r">${(a.weight_kg||0).toFixed(2)}</td><td class="r">${fe(a.precio_envio,2)}</td><td class="r neg">${fe(-a.cost_eur,2).replace('−','')}</td><td class="r neg"><strong>${fe(a.margin,2)}</strong></td><td class="r neg">${ratio?ratio.toFixed(1)+'×':'—'}</td></tr>`;
-  });
-  t+='</tbody></table>';
-  document.getElementById('alertas-content').innerHTML=
-    `<div class="alert-card urgent" style="margin-bottom:12px"><div class="alert-icon">⚠️</div><div class="alert-body"><div class="alert-title">${fn(alerts.length)} envíos con pérdida anormal · Total ${fe(data.alert_total_loss||0,0)}</div><div class="alert-desc">Coste &gt; 3× lo cobrado al cliente y pérdida &gt; 8€</div></div><button class="btn btn-red btn-sm" onclick="exportReclamaciones()">Descargar CSV</button></div>`+
-    `<div class="card"><div style="overflow-x:auto">${t}</div></div>`;
-}
 
 // ── ADS ───────────────────────────────────────────────────────
 function renderAds(data){
@@ -755,12 +736,6 @@ async function exportExcel(){
   try{const res=await fetch('/export/excel?month='+encodeURIComponent(month));const blob=await res.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Farma2go_PL_${month||'completo'}_${new Date().toISOString().slice(0,10)}.xlsx`;a.click();URL.revokeObjectURL(a.href);hideL();toast('Excel descargado','success');}
   catch(e){hideL();toast('Error: '+e.message,'error')}
 }
-async function exportReclamaciones(){
-  const month=getFilterValue();
-  showL('Generando CSV…');
-  try{const res=await fetch('/export/reclamaciones?month='+encodeURIComponent(month));const blob=await res.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Reclamaciones_${month||'completo'}_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(a.href);hideL();toast('CSV descargado','success');}
-  catch(e){hideL();toast('Error: '+e.message,'error')}
-}
 
 // ── STATUS & UTILS ────────────────────────────────────────────
 async function clearAll(){
@@ -768,7 +743,7 @@ async function clearAll(){
   await fetch('/clear',{method:'POST'});toast('Datos borrados','info');
   document.querySelectorAll('.carrier-btn').forEach(b=>b.classList.remove('loaded'));
   refreshStatus();pnlData=null;
-  ['pnl-content','semaphore','alerts-strip','paises-content','evolucion-content','compare-content','carriers-content','alertas-content','ads-content'].forEach(id=>{
+  ['pnl-content','semaphore','alerts-strip','paises-content','evolucion-content','compare-content','carriers-content','ads-content'].forEach(id=>{
     const el=document.getElementById(id);
     if(el)el.innerHTML='<div class="empty"><div class="empty-icon">◎</div><div class="empty-sub">Sin datos</div></div>';
   });

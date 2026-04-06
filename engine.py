@@ -308,3 +308,63 @@ def compute_shipping_margin(carrier_df, shopify_revenue: dict):
 
     carrier_df['margin'] = carrier_df['precio_envio'] - carrier_df['cost_eur']
     return carrier_df
+
+def build_comparison(ym_a, ym_b):
+    """Side-by-side P&L for two periods."""
+    full = build_pnl()
+    rows = full.get('pnl_by_country', [])
+
+    def agg(ym):
+        # Handle year filter
+        if len(ym) == 4:
+            month_rows = [r for r in rows if str(r.get('ym','')).startswith(ym)]
+        else:
+            month_rows = [r for r in rows if r.get('ym') == ym]
+        if not month_rows: return None
+        d = {
+            'n_pedidos':   sum(r.get('n_pedidos',0) or 0 for r in month_rows),
+            'venta':       round(sum(r.get('venta',0) or 0 for r in month_rows), 2),
+            'cogs':        round(sum(r.get('cogs',0) or 0 for r in month_rows), 2),
+            'mg_prod':     round(sum(r.get('mg_prod',0) or 0 for r in month_rows), 2),
+            'ing_envio':   round(sum(r.get('ing_envio',0) or 0 for r in month_rows), 2),
+            'cost_envio':  round(sum(r.get('cost_envio',0) or 0 for r in month_rows), 2),
+            'mg_final':    round(sum(r.get('mg_final',0) or 0 for r in month_rows), 2),
+            'gasto_ads':   round(sum(r.get('gasto_ads',0) or 0 for r in month_rows), 2),
+            'mg_post_ads': round(sum((r.get('mg_post_ads') if r.get('mg_post_ads') is not None else r.get('mg_final',0)) or 0 for r in month_rows), 2),
+        }
+        base = d['venta'] + d['ing_envio']
+        d['mg_envio']        = round(d['ing_envio'] - d['cost_envio'], 2)
+        d['mg_prod_pct']     = round(d['mg_prod'] / d['venta'], 4) if d['venta'] else 0
+        d['mg_final_pct']    = round(d['mg_final'] / base, 4) if base else 0
+        d['mg_post_ads_pct'] = round(d['mg_post_ads'] / base, 4) if base else 0
+        # By country
+        by_c = {}
+        for r in month_rows:
+            c = r.get('country','?')
+            if c not in by_c:
+                by_c[c] = {k: 0 for k in ['venta','mg_prod','mg_final','gasto_ads','mg_post_ads','mg_pct','mg_post_ads_pct']}
+            for k in ['venta','mg_prod','mg_final','gasto_ads']:
+                by_c[c][k] += (r.get(k) or 0)
+            mpa = r.get('mg_post_ads') if r.get('mg_post_ads') is not None else r.get('mg_final',0)
+            by_c[c]['mg_post_ads'] += (mpa or 0)
+        for c, cd in by_c.items():
+            b2 = cd['venta']
+            cd['mg_post_ads_pct'] = round(cd['mg_post_ads'] / b2, 4) if b2 else 0
+        d['by_country'] = by_c
+        return d
+
+    a = agg(ym_a)
+    b = agg(ym_b)
+
+    delta = None
+    if a and b:
+        delta = {}
+        for k in ['n_pedidos','venta','cogs','mg_prod','mg_envio','mg_final',
+                  'gasto_ads','mg_post_ads','mg_prod_pct','mg_final_pct','mg_post_ads_pct']:
+            va = a.get(k, 0) or 0
+            vb = b.get(k, 0) or 0
+            delta[k] = round(vb - va, 4 if 'pct' in k else 2)
+            delta[f'{k}_pct_change'] = round((vb - va) / abs(va), 4) if va else None
+
+    return {'a': a, 'b': b, 'ym_a': ym_a, 'ym_b': ym_b, 'delta': delta,
+            'months': sorted(set(r.get('ym','') for r in rows if r.get('ym')))}
