@@ -279,6 +279,7 @@ input[type=file]{display:none}
     <button class="tab" onclick="setTab('evolucion')">Evolución</button>
     <button class="tab" onclick="setTab('comparar')">Comparar</button>
     <button class="tab" onclick="setTab('carriers')">Carriers</button>
+    <button class="tab" onclick="setTab('pesos')">Franjas Peso</button>
     <button class="tab" onclick="setTab('ads')">Google Ads</button>
   </div>
 
@@ -319,6 +320,11 @@ input[type=file]{display:none}
   </div>
 
   <!-- RECLAMACIONES -->
+
+  <!-- FRANJAS DE PESO -->
+  <div class="tab-panel" id="panel-pesos">
+    <div id="pesos-content"><div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Calcula el P&L primero</div></div></div>
+  </div>
 
   <!-- ADS -->
   <div class="tab-panel" id="panel-ads">
@@ -420,6 +426,7 @@ function renderAll(data){
   renderPaises(data);
   renderEvolucion(data);
   renderCarriers(data);
+  renderPesos(data);
   renderAds(data);
 }
 
@@ -830,6 +837,120 @@ function renderCarriers(data){
 }
 
 
+// ── FRANJAS DE PESO ───────────────────────────────────────────
+function renderPesos(data){
+  const tc  = data.tramo_country;
+  const tcar= data.tramo_carrier;
+  const tramos = data.tramo_order || ['0-0.5','0.5-1','1-2','2-3','3-4','4-5','5-10','10-20','>20'];
+  if(!tc||!tc.length){document.getElementById('pesos-content').innerHTML='<div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Sin datos de envíos</div></div>';return;}
+
+  // ── TABLE 1: Envíos por franja × país ─────────────────────────
+  const countries=[...new Set(tc.map(r=>r.country))].filter(c=>
+    ['España','Portugal','Francia','Italia','Alemania','Reino Unido'].includes(c)
+  ).sort();
+  const tcIdx={};
+  tc.forEach(r=>{ tcIdx[r.tramo+'|'+r.country]=r; });
+
+  let t1=`<table class="tbl"><thead><tr><th>Franja peso</th>`;
+  countries.forEach(c=>{ t1+=`<th class="r">${c}</th>`; });
+  t1+=`<th class="r">Total</th></tr></thead><tbody>`;
+
+  tramos.forEach(tr=>{
+    const rowData=countries.map(c=>tcIdx[tr+'|'+c]);
+    const totalN=rowData.reduce((a,r)=>a+(r?.n||0),0);
+    if(!totalN)return;
+    t1+=`<tr><td><strong>${tr} kg</strong></td>`;
+    rowData.forEach(r=>{
+      t1+=r?`<td class="r">${fn(r.n)}</td>`:`<td class="r dim">—</td>`;
+    });
+    t1+=`<td class="r"><strong>${fn(totalN)}</strong></td></tr>`;
+  });
+  // Total row
+  t1+=`<tr style="border-top:2px solid var(--bdr2)"><td><strong>Total</strong></td>`;
+  countries.forEach(c=>{
+    const tot=tc.filter(r=>r.country===c).reduce((a,r)=>a+(r.n||0),0);
+    t1+=`<td class="r"><strong>${fn(tot)}</strong></td>`;
+  });
+  const grandTotal=tc.reduce((a,r)=>a+(r.n||0),0);
+  t1+=`<td class="r"><strong>${fn(grandTotal)}</strong></td></tr>`;
+  t1+='</tbody></table>';
+
+  // ── TABLE 2: Margen por franja × país ─────────────────────────
+  let t2=`<table class="tbl"><thead><tr><th>Franja peso</th>`;
+  countries.forEach(c=>{ t2+=`<th class="r">${c} €/env</th>`; });
+  t2+=`<th class="r">Global €/env</th></tr></thead><tbody>`;
+
+  tramos.forEach(tr=>{
+    const rowData=countries.map(c=>tcIdx[tr+'|'+c]);
+    const hasData=rowData.some(r=>r?.n>0);
+    if(!hasData)return;
+    t2+=`<tr><td><strong>${tr} kg</strong></td>`;
+    rowData.forEach(r=>{
+      if(!r||!r.n){ t2+=`<td class="r dim">—</td>`; return; }
+      const ppe=r.margen/r.n;
+      t2+=`<td class="r ${ppe>=0?'pos':'neg'}">${fe(ppe,2)}</td>`;
+    });
+    const allR=tc.filter(r=>r.tramo===tr);
+    const totN=allR.reduce((a,r)=>a+(r.n||0),0);
+    const totMg=allR.reduce((a,r)=>a+(r.margen||0),0);
+    const gppe=totN?totMg/totN:0;
+    t2+=`<td class="r ${gppe>=0?'pos':'neg'}"><strong>${fe(gppe,2)}</strong></td></tr>`;
+  });
+  t2+='</tbody></table>';
+
+  // ── TABLE 3: Envíos por franja × carrier ──────────────────────
+  const carriers=[...new Set(tcar.map(r=>r.carrier))].sort();
+  const tcarIdx={};
+  tcar.forEach(r=>{ tcarIdx[r.tramo+'|'+r.carrier]=r; });
+
+  let t3=`<table class="tbl"><thead><tr><th>Franja peso</th>`;
+  carriers.forEach(c=>{ t3+=`<th class="r">${c}</th>`; });
+  t3+=`<th class="r">Total</th></tr></thead><tbody>`;
+
+  tramos.forEach(tr=>{
+    const rowData=carriers.map(c=>tcarIdx[tr+'|'+c]);
+    const totalN=rowData.reduce((a,r)=>a+(r?.n||0),0);
+    if(!totalN)return;
+    t3+=`<tr><td><strong>${tr} kg</strong></td>`;
+    rowData.forEach(r=>{
+      t3+=r?`<td class="r">${fn(r.n)}</td>`:`<td class="r dim">—</td>`;
+    });
+    t3+=`<td class="r"><strong>${fn(totalN)}</strong></td></tr>`;
+  });
+  t3+='</tbody></table>';
+
+  // ── SVG CHART: distribución de envíos por franja ──────────────
+  const tramoTotals=tramos.map(tr=>({tr,n:tc.filter(r=>r.tramo===tr).reduce((a,r)=>a+(r.n||0),0)})).filter(r=>r.n>0);
+  const maxN=Math.max(...tramoTotals.map(r=>r.n));
+  const BAR_H=28;const W=500;const L=70;
+  let svgBars='';
+  const GRAD_COLORS=['#1e4d7b','#2a7a4b','#b85c0a','#7030a0','#b93535','#5a524a','#c0800a','#1e7b7b','#555'];
+  tramoTotals.forEach(({tr,n},i)=>{
+    const y=i*BAR_H+10;
+    const w=Math.round((n/maxN)*(W-L-80));
+    svgBars+=`<rect x="${L}" y="${y+3}" width="${w}" height="${BAR_H-6}" fill="${GRAD_COLORS[i%GRAD_COLORS.length]}" rx="3" opacity="0.85"/>`;
+    svgBars+=`<text x="${L-5}" y="${y+BAR_H/2+4}" text-anchor="end" font-size="10" fill="#5a524a">${tr} kg</text>`;
+    svgBars+=`<text x="${L+w+6}" y="${y+BAR_H/2+4}" font-size="10" fill="#5a524a">${fn(n)}</text>`;
+    const pct=((n/tramoTotals.reduce((a,r)=>a+r.n,0))*100).toFixed(1);
+    svgBars+=`<text x="${L+w+50}" y="${y+BAR_H/2+4}" font-size="9" fill="#9a8f84">${pct}%</text>`;
+  });
+  const svgH=tramoTotals.length*BAR_H+20;
+  const svg=`<svg width="100%" viewBox="0 0 ${W} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="font-family:'DM Sans',sans-serif">
+    ${svgBars}
+  </svg>`;
+
+  document.getElementById('pesos-content').innerHTML=
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">`+
+    `<div class="card"><div class="card-hdr"><span class="card-title">Envíos por franja y país</span><span class="card-sub">nº envíos</span></div><div style="overflow-x:auto">${t1}</div></div>`+
+    `<div class="card"><div class="card-hdr"><span class="card-title">Margen por franja y país</span><span class="card-sub">€ por envío</span></div><div style="overflow-x:auto">${t2}</div></div>`+
+    `</div>`+
+    `<div style="display:grid;grid-template-columns:2fr 1fr;gap:14px">`+
+    `<div class="card"><div class="card-hdr"><span class="card-title">Envíos por franja y carrier</span></div><div style="overflow-x:auto">${t3}</div></div>`+
+    `<div class="card"><div class="card-hdr"><span class="card-title">Distribución por franja</span><span class="card-sub">todos los carriers</span></div><div style="padding:14px">${svg}</div></div>`+
+    `</div>`;
+}
+
+
 // ── ADS ───────────────────────────────────────────────────────
 function renderAds(data){
   const ads=data.ads;if(!ads||!ads.length)return;
@@ -865,7 +986,7 @@ async function clearAll(){
   await fetch('/clear',{method:'POST'});toast('Datos borrados','info');
   document.querySelectorAll('.carrier-btn').forEach(b=>b.classList.remove('loaded'));
   refreshStatus();pnlData=null;
-  ['pnl-content','semaphore','alerts-strip','paises-content','evolucion-content','compare-content','carriers-content','ads-content'].forEach(id=>{
+  ['pnl-content','semaphore','alerts-strip','paises-content','evolucion-content','compare-content','carriers-content','pesos-content','ads-content'].forEach(id=>{
     const el=document.getElementById(id);
     if(el)el.innerHTML='<div class="empty"><div class="empty-icon">◎</div><div class="empty-sub">Sin datos</div></div>';
   });

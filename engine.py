@@ -331,6 +331,28 @@ def build_pnl(ym_filter=None):
         results['total_retail_media']  = round(sum(float(v or 0) for v in retail_media_by_ym.values()), 2)
         results['total_inpost_comp']   = round(sum(float(v or 0) for v in inpost_comp_by_ym.values()), 2)
 
+    # ── WEIGHT BANDS ────────────────────────────────────────────
+    if shipping_df is not None and 'tramo' in shipping_df.columns:
+        TRAMO_ORDER = ['0-0.5','0.5-1','1-2','2-3','3-4','4-5','5-10','10-20','>20']
+        wdf = shipping_df[shipping_df['tramo'].notna() & shipping_df['country'].notna()].copy()
+        # By tramo × country
+        tc = wdf.groupby(['tramo','country']).agg(
+            n=('ref','count'), coste=('cost_eur','sum'),
+            precio=('precio_envio','sum'), margen=('margin','sum')
+        ).reset_index()
+        tc['tramo_order'] = tc['tramo'].map({t:i for i,t in enumerate(TRAMO_ORDER)})
+        tc = tc.sort_values('tramo_order').drop(columns='tramo_order')
+        results['tramo_country'] = tc.to_dict('records')
+        # By tramo × carrier
+        tcar = wdf.groupby(['tramo','carrier']).agg(
+            n=('ref','count'), coste=('cost_eur','sum'),
+            precio=('precio_envio','sum'), margen=('margin','sum')
+        ).reset_index()
+        tcar['tramo_order'] = tcar['tramo'].map({t:i for i,t in enumerate(TRAMO_ORDER)})
+        tcar = tcar.sort_values('tramo_order').drop(columns='tramo_order')
+        results['tramo_carrier'] = tcar.to_dict('records')
+        results['tramo_order']   = TRAMO_ORDER
+
     # ── ALERTS ────────────────────────────────────────────────────
     if shipping_df is not None:
         alerts = shipping_df[
