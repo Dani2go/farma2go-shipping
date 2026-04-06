@@ -325,6 +325,8 @@ input[type=file] { display: none; }
       <div class="ds-row"><div class="ds-dot no"></div><div class="ds-label">Sin datos cargados</div></div>
     </div>
     <button class="btn btn-outline btn-sm" style="margin-top:8px; width:100%; justify-content:center;" onclick="clearAll()">Limpiar todo</button>
+    <input type="file" id="file-seed" accept=".zip" onchange="uploadSeed(this)" style="display:none">
+    <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-top:4px;" onclick="document.getElementById('file-seed').click()">↑ Importar histórico</button>
   </div>
 
 </aside>
@@ -722,6 +724,26 @@ function setTab(id) {
   document.getElementById('panel-'+id).classList.add('active');
 }
 
+
+async function uploadSeed(input) {
+  const file = input.files[0]; if (!file) return;
+  showLoading('Importando histórico...');
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    setProgress(40);
+    const res = await fetch('/seed', { method: 'POST', body: fd });
+    setProgress(90);
+    const data = await res.json();
+    hideLoading();
+    if (data.ok) {
+      showToast('Histórico importado: ' + data.imported.join(', '), 'success');
+      refreshStatus();
+      await loadPnl();
+    } else { showToast('Error: ' + data.error, 'error'); }
+  } catch(e) { hideLoading(); showToast('Error: ' + e.message, 'error'); }
+  input.value = '';
+}
+
 refreshStatus();
 </script>
 </body>
@@ -911,6 +933,34 @@ def clear():
             os.remove(os.path.join(data_dir, f))
     return jsonify({'ok': True})
 
+
+
+@app.route('/seed', methods=['POST'])
+def seed():
+    """Import pre-built historical JSON files from a ZIP."""
+    import zipfile, io
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'ok': False, 'error': 'No se recibió archivo'})
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(file.read()))
+        imported = []
+        for name in zf.namelist():
+            if not name.endswith('.json'): continue
+            key = name.replace('.json', '')
+            content = zf.read(name).decode('utf-8')
+            dest = os.path.join(DATA_DIR, name)
+            with open(dest, 'w', encoding='utf-8') as f_out:
+                f_out.write(content)
+            try:
+                import pandas as pd
+                df = pd.read_json(dest, orient='records')
+                imported.append(f'{key}: {len(df):,} filas')
+            except:
+                imported.append(key)
+        return jsonify({'ok': True, 'imported': imported})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
 
 if __name__ == '__main__':
     print("\n" + "="*55)
