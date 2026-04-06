@@ -234,7 +234,7 @@ input[type=file]{display:none}
       <button class="btn btn-outline btn-sm" onclick="setFilter('')">Todo</button>
       <button class="btn btn-outline btn-sm" id="btn-f-2025" onclick="setFilter('2025')">2025</button>
       <button class="btn btn-outline btn-sm" id="btn-f-2026" onclick="setFilter('2026')">2026</button>
-      <select class="sel" id="global-month" onchange="setFilter(this.value)" style="min-width:110px">
+      <select class="sel" id="global-month" onchange="onMonthChange(this.value)" style="min-width:110px">
         <option value="">Mes concreto…</option>
       </select>
     </div>
@@ -763,19 +763,21 @@ let _activeFilter = '';
 
 function setFilter(val) {
   _activeFilter = val;
-  // Update button active states
-  ['','2025','2026'].forEach(y => {
-    const btn = document.getElementById('btn-f-'+y) || (y===''?null:null);
-  });
-  document.getElementById('btn-f-2025').style.background = val==='2025'?'var(--acc)':'';
-  document.getElementById('btn-f-2025').style.color = val==='2025'?'#fff':'';
-  document.getElementById('btn-f-2026').style.background = val==='2026'?'var(--acc)':'';
-  document.getElementById('btn-f-2026').style.color = val==='2026'?'#fff':'';
-  // Sync dropdown if it's a specific month
+  // Highlight active year buttons
+  const b25 = document.getElementById('btn-f-2025');
+  const b26 = document.getElementById('btn-f-2026');
+  if(b25){ b25.style.background = val==='2025'?'var(--acc)':''; b25.style.color = val==='2025'?'#fff':''; }
+  if(b26){ b26.style.background = val==='2026'?'var(--acc)':''; b26.style.color = val==='2026'?'#fff':''; }
+  // Sync month dropdown
   const sel = document.getElementById('global-month');
-  if(val && val.length === 7) { sel.value = val; }
-  else { sel.value = ''; }
+  if(sel){ sel.value = (val && val.length===7) ? val : ''; }
   loadPnl();
+}
+
+function onMonthChange(val) {
+  // Called when user picks a specific month from the dropdown
+  if(val) setFilter(val);
+  else setFilter('');
 }
 
 function getFilterValue() {
