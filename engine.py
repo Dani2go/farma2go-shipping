@@ -89,8 +89,12 @@ def build_pnl(ym_filter=None):
     # ── SHIPPING MARGIN ───────────────────────────────────────────
     if shipping_df is not None:
         if ym_filter:
-            months = [ym_filter] if isinstance(ym_filter, str) else ym_filter
-            shipping_df = shipping_df[shipping_df['ym'].isin(months)]
+            if isinstance(ym_filter, str) and len(ym_filter) == 4:
+                # Year filter e.g. "2025" or "2026"
+                shipping_df = shipping_df[shipping_df['ym'].str.startswith(ym_filter)]
+            else:
+                months = [ym_filter] if isinstance(ym_filter, str) else ym_filter
+                shipping_df = shipping_df[shipping_df['ym'].isin(months)]
 
         ship_summary = shipping_df.groupby(['carrier','country','ym']).agg(
             n_envios=('ref','count'),
@@ -112,8 +116,11 @@ def build_pnl(ym_filter=None):
     # ── PRODUCT MARGIN ────────────────────────────────────────────
     if sales_df is not None:
         if ym_filter:
-            months = [ym_filter] if isinstance(ym_filter, str) else ym_filter
-            sales_df = sales_df[sales_df['ym'].isin(months)]
+            if isinstance(ym_filter, str) and len(ym_filter) == 4:
+                sales_df = sales_df[sales_df['ym'].str.startswith(ym_filter)]
+            else:
+                months = [ym_filter] if isinstance(ym_filter, str) else ym_filter
+                sales_df = sales_df[sales_df['ym'].isin(months)]
 
         # Detect format: pre-aggregated (has 'venta','cogs','mg_prod')
         # vs raw lines (has 'venta_total','is_shipping')
@@ -222,8 +229,11 @@ def build_pnl(ym_filter=None):
     # ── ADS INTEGRATION ───────────────────────────────────────────
     if ads_df is not None:
         if ym_filter:
-            months = [ym_filter] if isinstance(ym_filter, str) else ym_filter
-            ads_df = ads_df[ads_df['ym'].isin(months)]
+            if isinstance(ym_filter, str) and len(ym_filter) == 4:
+                ads_df = ads_df[ads_df['ym'].str.startswith(ym_filter)]
+            else:
+                months = [ym_filter] if isinstance(ym_filter, str) else ym_filter
+                ads_df = ads_df[ads_df['ym'].isin(months)]
 
         ads_summary = ads_df.groupby(['pais','ym']).agg(
             gasto_ads=('coste','sum'),

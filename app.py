@@ -230,7 +230,14 @@ input[type=file]{display:none}
 <header>
   <div class="logo">Farma2go <span class="slash">/</span> <span class="sub">Shipping P&L</span></div>
   <div class="header-right">
-    <select class="sel" id="global-month" onchange="loadPnl()"><option value="">Todos los meses</option></select>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="setFilter('')">Todo</button>
+      <button class="btn btn-outline btn-sm" id="btn-f-2025" onclick="setFilter('2025')">2025</button>
+      <button class="btn btn-outline btn-sm" id="btn-f-2026" onclick="setFilter('2026')">2026</button>
+      <select class="sel" id="global-month" onchange="setFilter(this.value)" style="min-width:110px">
+        <option value="">Mes concreto…</option>
+      </select>
+    </div>
     <button class="btn btn-primary" onclick="loadPnl()">Calcular P&L</button>
     <button class="btn btn-grn" onclick="exportExcel()">↓ Excel</button>
     <button class="btn btn-red" id="btn-rec" onclick="exportReclamaciones()" style="display:none">Reclamar</button>
@@ -401,7 +408,7 @@ async function uploadSeed(input){
 
 // ── P&L LOAD & RENDER ──────────────────────────────────────────
 async function loadPnl(){
-  const month=document.getElementById('global-month').value;
+  const month=getFilterValue();
   showL('Calculando P&L…');
   try{
     prog(50);const res=await fetch('/pnl?month='+encodeURIComponent(month));prog(90);
@@ -743,13 +750,13 @@ function renderAds(data){
 
 // ── EXPORTS ───────────────────────────────────────────────────
 async function exportExcel(){
-  const month=document.getElementById('global-month').value;
+  const month=getFilterValue();
   showL('Generando Excel…');
   try{const res=await fetch('/export/excel?month='+encodeURIComponent(month));const blob=await res.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Farma2go_PL_${month||'completo'}_${new Date().toISOString().slice(0,10)}.xlsx`;a.click();URL.revokeObjectURL(a.href);hideL();toast('Excel descargado','success');}
   catch(e){hideL();toast('Error: '+e.message,'error')}
 }
 async function exportReclamaciones(){
-  const month=document.getElementById('global-month').value;
+  const month=getFilterValue();
   showL('Generando CSV…');
   try{const res=await fetch('/export/reclamaciones?month='+encodeURIComponent(month));const blob=await res.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Reclamaciones_${month||'completo'}_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(a.href);hideL();toast('CSV descargado','success');}
   catch(e){hideL();toast('Error: '+e.message,'error')}
@@ -767,17 +774,77 @@ async function clearAll(){
   });
 }
 
+const MONTHS_ES = {
+  '01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun',
+  '07':'Jul','08':'Ago','09':'Sep','10':'Oct','11':'Nov','12':'Dic'
+};
+function fmtMonth(ym) {
+  const [y,m] = ym.split('-');
+  return `${MONTHS_ES[m]||m} ${y.slice(2)}`;  // "Mar 25"
+}
+
+let _allMonths = [];
+let _activeFilter = '';
+
+function setFilter(val) {
+  _activeFilter = val;
+  // Update button active states
+  ['','2025','2026'].forEach(y => {
+    const btn = document.getElementById('btn-f-'+y) || (y===''?null:null);
+  });
+  document.getElementById('btn-f-2025').style.background = val==='2025'?'var(--acc)':'';
+  document.getElementById('btn-f-2025').style.color = val==='2025'?'#fff':'';
+  document.getElementById('btn-f-2026').style.background = val==='2026'?'var(--acc)':'';
+  document.getElementById('btn-f-2026').style.color = val==='2026'?'#fff':'';
+  // Sync dropdown if it's a specific month
+  const sel = document.getElementById('global-month');
+  if(val && val.length === 7) { sel.value = val; }
+  else { sel.value = ''; }
+  loadPnl();
+}
+
+function getFilterValue() {
+  // Returns the value to pass to /pnl
+  if(_activeFilter === '2025') return '2025';
+  if(_activeFilter === '2026') return '2026';
+  if(_activeFilter && _activeFilter.length === 7) return _activeFilter;
+  return '';
+}
+
 async function refreshStatus(){
   const res=await fetch('/status');const data=await res.json();
   const el=document.getElementById('data-status');
   if(!data.files||!Object.keys(data.files).length){el.innerHTML='<div class="ds-row"><div class="ds-dot no"></div><div class="ds-label">Sin datos cargados</div></div>';return;}
   if(data.months&&data.months.length){
-    const a=document.getElementById('global-month');const b=document.getElementById('cmp-a');const c=document.getElementById('cmp-b');
-    const cur=a.value;
-    const opts='<option value="">Todos los meses</option>'+data.months.map(m=>`<option value="${m}">${m}</option>`).join('');
-    a.innerHTML=opts;a.value=cur;
-    b.innerHTML='<option value="">Período A</option>'+data.months.map(m=>`<option value="${m}">${m}</option>`).join('');
-    c.innerHTML='<option value="">Período B</option>'+[...data.months].reverse().map(m=>`<option value="${m}">${m}</option>`).join('');
+    // Sort chronologically
+    _allMonths = [...data.months].sort();
+    const years = [...new Set(_allMonths.map(m=>m.split('-')[0]))].sort();
+
+    // Main selector: grouped by year
+    const sel = document.getElementById('global-month');
+    const cur = sel.value;
+    let opts = '<option value="">Mes concreto…</option>';
+    years.reverse().forEach(y => {
+      const yMonths = _allMonths.filter(m=>m.startsWith(y)).reverse();
+      opts += `<optgroup label="${y}">`;
+      yMonths.forEach(m => { opts += `<option value="${m}">${fmtMonth(m)}</option>`; });
+      opts += '</optgroup>';
+    });
+    sel.innerHTML = opts;
+    if(cur && _allMonths.includes(cur)) sel.value = cur;
+
+    // Comparison selectors
+    const b = document.getElementById('cmp-a');
+    const c = document.getElementById('cmp-b');
+    let cmpOpts = '<option value="">— elegir —</option>';
+    [..._allMonths].reverse().forEach(m => { cmpOpts += `<option value="${m}">${fmtMonth(m)} (${m})</option>`; });
+    b.innerHTML = cmpOpts;
+    c.innerHTML = cmpOpts;
+    // Default comparison: last two available months
+    if(_allMonths.length >= 2) {
+      b.value = _allMonths[_allMonths.length-2];
+      c.value = _allMonths[_allMonths.length-1];
+    }
   }
   el.innerHTML=Object.entries(data.files).map(([k,v])=>`<div class="ds-row"><div class="ds-dot ${v.rows&&v.rows>0?'ok':'warn'}"></div><div class="ds-label">${k}</div><div class="ds-val">${v.rows||0}</div></div>`).join('');
 }
