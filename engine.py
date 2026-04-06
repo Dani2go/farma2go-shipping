@@ -169,12 +169,18 @@ def build_pnl(ym_filter=None):
         results['order_count'] = len(order_merged)
 
         # Country × month P&L
-        # Prefer country from carrier data, then from sales, then plataforma
-        for col in ['country_carrier','country']:
-            if col in order_merged.columns and order_merged[col].notna().mean() > 0.5:
-                grp_col = col; break
+        # 'country' col comes from odoo_sales (enriched via shipping crosswalk)
+        # Use it directly; fall back to country_carrier or plataforma
+        if 'country' in order_merged.columns and order_merged['country'].notna().mean() > 0.5:
+            grp_col = 'country'
+        elif 'country_carrier' in order_merged.columns and order_merged['country_carrier'].notna().mean() > 0.5:
+            grp_col = 'country_carrier'
+            order_merged[grp_col] = order_merged[grp_col].replace({'94': 'España'})
         else:
             grp_col = 'plataforma'
+        # Clean up stray codes
+        if grp_col in order_merged.columns:
+            order_merged[grp_col] = order_merged[grp_col].replace({'94': 'España'})
 
         agg_cols = dict(
             n_pedidos=('ref_odoo','count'),
