@@ -351,6 +351,7 @@ input[type=file] { display: none; }
     <button class="tab" onclick="setTab('paises')">Por País</button>
     <button class="tab" onclick="setTab('carriers')">Carriers</button>
     <button class="tab" onclick="setTab('alertas')">Reclamaciones</button>
+    <button class="tab" onclick="setTab('evolucion')">Evolución País</button>
     <button class="tab" onclick="setTab('ads')">Google Ads</button>
   </div>
 
@@ -416,6 +417,17 @@ input[type=file] { display: none; }
         <div class="empty-icon">◎</div>
         <div class="empty-title">Sin alertas detectadas</div>
         <div class="empty-sub">Las alertas aparecen cuando el coste supera 3× lo cobrado y la pérdida es mayor de 8€</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVOLUCIÓN POR PAÍS -->
+  <div class="tab-panel" id="panel-evolucion">
+    <div id="evolucion-content">
+      <div class="empty">
+        <div class="empty-icon">◎</div>
+        <div class="empty-title">Sin datos de evolución</div>
+        <div class="empty-sub">Calcula el P&L primero</div>
       </div>
     </div>
   </div>
@@ -533,7 +545,7 @@ function renderPnl(data) {
     document.getElementById('kpi-alerts-sub').textContent = 'Pérdida total: ' + fmtEur(data.alert_total_loss||0,0);
     document.getElementById('btn-reclamaciones').style.display = data.alert_count > 0 ? 'inline-flex' : 'none';
   }
-  renderResumen(data); renderPaises(data); renderCarriers(data); renderAlertas(data); renderAds(data);
+  renderResumen(data); renderPaises(data); renderCarriers(data); renderAlertas(data); renderAds(data); renderEvolucion(data);
 }
 
 function set(id, val, colorClass) {
@@ -649,6 +661,71 @@ function renderAlertas(data) {
   tbl+='</tbody></table>';
   html += card('Envíos para reclamar', 'coste &gt; 3× cobrado y pérdida &gt; 8€', tbl);
   document.getElementById('alertas-content').innerHTML = html;
+}
+
+function renderEvolucion(data) {
+  const evo = data.monthly_by_country;
+  const months = data.all_months || [];
+  if (!evo || !months.length) return;
+
+  const COUNTRIES = ['España','Portugal','Francia','Italia','Alemania','Reino Unido'];
+  const MH = months.map(m => m.replace('2025-','').replace('2026-',"'26-"));
+
+  let html = '';
+
+  // Margen final table
+  let tbl = `<table class="tbl"><thead><tr><th>País</th>${MH.map(m=>`<th class="r">${m}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>`;
+  COUNTRIES.forEach(c => {
+    const d = evo[c]; if (!d) return;
+    const tot = Object.values(d).reduce((a,r) => a+(r.mg_final||0), 0);
+    tbl += `<tr><td><strong>${c}</strong></td>`;
+    months.forEach(ym => {
+      const r = d[ym];
+      if (!r) { tbl += `<td class="r dim">—</td>`; return; }
+      const cls = r.mg_final >= 0 ? 'pos' : 'neg';
+      tbl += `<td class="r ${cls}">${fmtEur(r.mg_final,0)}</td>`;
+    });
+    const tc = tot >= 0 ? 'pos' : 'neg';
+    tbl += `<td class="r ${tc}"><strong>${fmtEur(tot,0)}</strong></td></tr>`;
+  });
+  tbl += '</tbody></table>';
+  html += card('Margen Final € por País y Mes', '', tbl);
+
+  // % margin table
+  let tbl2 = `<table class="tbl"><thead><tr><th>País</th>${MH.map(m=>`<th class="r">${m}</th>`).join('')}<th class="r">Media</th></tr></thead><tbody>`;
+  COUNTRIES.forEach(c => {
+    const d = evo[c]; if (!d) return;
+    const vals = Object.values(d).filter(r => r.mg_pct != null);
+    const avg = vals.length ? vals.reduce((a,r) => a+r.mg_pct, 0)/vals.length : null;
+    tbl2 += `<tr><td><strong>${c}</strong></td>`;
+    months.forEach(ym => {
+      const r = d[ym];
+      if (!r || r.mg_pct == null) { tbl2 += `<td class="r dim">—</td>`; return; }
+      const cls = r.mg_pct >= 0 ? 'pos' : 'neg';
+      tbl2 += `<td class="r ${cls}">${fmtPct(r.mg_pct)}</td>`;
+    });
+    const ac = avg && avg >= 0 ? 'pos' : 'neg';
+    tbl2 += `<td class="r ${ac}"><strong>${avg != null ? fmtPct(avg) : '—'}</strong></td></tr>`;
+  });
+  tbl2 += '</tbody></table>';
+  html += card('% Margen Final por País y Mes', '', tbl2);
+
+  // Orders table
+  let tbl3 = `<table class="tbl"><thead><tr><th>País</th>${MH.map(m=>`<th class="r">${m}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>`;
+  COUNTRIES.forEach(c => {
+    const d = evo[c]; if (!d) return;
+    const tot = Object.values(d).reduce((a,r) => a+(r.n||0), 0);
+    tbl3 += `<tr><td><strong>${c}</strong></td>`;
+    months.forEach(ym => {
+      const r = d[ym];
+      tbl3 += r ? `<td class="r dim">${fmtN(r.n)}</td>` : `<td class="r dim">—</td>`;
+    });
+    tbl3 += `<td class="r"><strong>${fmtN(tot)}</strong></td></tr>`;
+  });
+  tbl3 += '</tbody></table>';
+  html += card('Pedidos por País y Mes', '', tbl3);
+
+  document.getElementById('evolucion-content').innerHTML = html;
 }
 
 function renderAds(data) {

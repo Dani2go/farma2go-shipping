@@ -169,10 +169,14 @@ def build_pnl(ym_filter=None):
         results['order_count'] = len(order_merged)
 
         # Country × month P&L
-        grp_col = ('country_carrier' if 'country_carrier' in order_merged.columns
-                   else 'country' if 'country' in order_merged.columns
-                   else 'plataforma')
-        cty_pnl = order_merged.groupby([grp_col, 'ym']).agg(
+        # Prefer country from carrier data, then from sales, then plataforma
+        for col in ['country_carrier','country']:
+            if col in order_merged.columns and order_merged[col].notna().mean() > 0.5:
+                grp_col = col; break
+        else:
+            grp_col = 'plataforma'
+
+        agg_cols = dict(
             n_pedidos=('ref_odoo','count'),
             venta=('venta','sum'),
             cogs=('cogs','sum'),
@@ -180,10 +184,34 @@ def build_pnl(ym_filter=None):
             ing_envio=('ing_envio','sum'),
             cost_envio=('cost_envio','sum'),
             mg_final=('mg_final','sum'),
-        ).reset_index()
+        )
+        cty_pnl = order_merged.groupby([grp_col, 'ym']).agg(**agg_cols).reset_index()
         cty_pnl.columns = ['country' if c == grp_col else c for c in cty_pnl.columns]
         cty_pnl['mg_pct'] = cty_pnl['mg_final'] / (cty_pnl['venta'] + cty_pnl['ing_envio']).replace(0, np.nan)
         results['pnl_by_country'] = cty_pnl.to_dict('records')
+
+        # Monthly evolution per country (for the country evolution tab)
+        MAIN_COUNTRIES = ['España','Portugal','Francia','Italia','Alemania','Reino Unido']
+        monthly_evo = {}
+        all_months = sorted(order_merged['ym'].dropna().unique())
+        for country in MAIN_COUNTRIES:
+            g = order_merged[order_merged[grp_col] == country]
+            if not len(g): continue
+            monthly_evo[country] = {}
+            for ym in all_months:
+                gm = g[g['ym'] == ym]
+                if not len(gm): continue
+                v = float(gm['venta'].sum()); mf = float(gm['mg_final'].sum())
+                monthly_evo[country][ym] = {
+                    'n': int(len(gm)), 'venta': round(v, 2),
+                    'mg_prod': round(float(gm['mg_prod'].sum()), 2),
+                    'ing_envio': round(float(gm['ing_envio'].sum()), 2),
+                    'cost_envio': round(float(gm['cost_envio'].sum()), 2),
+                    'mg_final': round(mf, 2),
+                    'mg_pct': round(mf / (v + float(gm['ing_envio'].sum())) if (v + float(gm['ing_envio'].sum())) else 0, 4),
+                }
+        results['monthly_by_country'] = monthly_evo
+        results['all_months'] = list(all_months)
 
     # ── ADS INTEGRATION ───────────────────────────────────────────
     if ads_df is not None:
