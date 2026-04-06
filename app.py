@@ -64,410 +64,267 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Farma2go — Shipping P&L</title>
-<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<title>Farma2go — P&L</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f7f5f0;
-  --paper: #ffffff;
-  --paper2: #faf9f6;
-  --bdr: #e2ddd6;
-  --bdr2: #d0c9bf;
-  --text: #1a1714;
-  --sub: #5a524a;
-  --muted: #9a8f84;
-  --acc: #2d5a8e;
-  --acc-lt: #e8f0f9;
-  --red: #b93535;
-  --red-lt: #fdf0f0;
-  --grn: #2a7a4b;
-  --grn-lt: #eef7f2;
-  --org: #b85c0a;
-  --org-lt: #fef4ec;
-  --serif: 'Libre Baskerville', Georgia, serif;
-  --sans: 'DM Sans', system-ui, sans-serif;
-  --mono: 'DM Mono', 'Courier New', monospace;
-  --r: 4px;
-  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 1px rgba(0,0,0,.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+  --bg:#f5f3ee; --paper:#fff; --paper2:#faf9f6; --bdr:#e4dfd8; --bdr2:#cec7be;
+  --text:#1a1714; --sub:#5a524a; --muted:#9a8f84; --acc:#1e4d7b; --acc-lt:#e8f0f9;
+  --red:#b93535; --red-lt:#fdf0f0; --grn:#2a7a4b; --grn-lt:#eef7f2;
+  --org:#b85c0a; --org-lt:#fef4ec; --yel:#7a6800; --yel-lt:#fffbe6;
+  --serif:'Libre Baskerville',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --mono:'DM Mono','Courier New',monospace;
+  --r:4px; --shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08);
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13.5px; min-height: 100vh; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13.5px;min-height:100vh}
 
 /* HEADER */
-header {
-  background: var(--paper);
-  border-bottom: 1px solid var(--bdr);
-  padding: 0 32px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky; top: 0; z-index: 100;
-  box-shadow: var(--shadow);
-}
-.logo { font-family: var(--serif); font-size: 18px; font-weight: 700; color: var(--text); display: flex; align-items: baseline; gap: 6px; }
-.logo .sep { color: var(--bdr2); font-weight: 400; }
-.logo .sub { font-size: 13px; font-weight: 400; font-style: italic; color: var(--muted); }
-.header-right { display: flex; gap: 8px; align-items: center; }
+header{background:var(--paper);border-bottom:1px solid var(--bdr);padding:0 28px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.logo{font-family:var(--serif);font-size:17px;font-weight:700;display:flex;align-items:baseline;gap:8px}
+.logo .slash{color:var(--bdr2);font-weight:400}
+.logo .sub{font-size:13px;font-weight:400;font-style:italic;color:var(--muted)}
+.header-right{display:flex;gap:8px;align-items:center}
 
 /* LAYOUT */
-.layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 56px); }
-.sidebar {
-  background: var(--paper);
-  border-right: 1px solid var(--bdr);
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-}
-.main { padding: 24px 28px; background: var(--bg); }
+.layout{display:grid;grid-template-columns:248px 1fr;min-height:calc(100vh - 54px)}
+.sidebar{background:var(--paper);border-right:1px solid var(--bdr);padding:18px 14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.main{padding:22px 26px;background:var(--bg);overflow-y:auto}
 
 /* SIDEBAR */
-.sgroup { display: flex; flex-direction: column; gap: 4px; }
-.sgroup-title {
-  font-size: 9px; text-transform: uppercase; letter-spacing: 1.8px;
-  color: var(--muted); font-family: var(--sans); font-weight: 500;
-  padding: 0 4px 6px; border-bottom: 1px solid var(--bdr); margin-bottom: 2px;
-}
-.carrier-btn {
-  width: 100%; padding: 8px 10px; border: 1px solid var(--bdr);
-  border-radius: var(--r); background: var(--paper2);
-  color: var(--sub); cursor: pointer; font-family: var(--sans);
-  font-size: 12px; display: flex; align-items: center; gap: 10px;
-  transition: all .12s; text-align: left;
-}
-.carrier-btn:hover { border-color: var(--acc); background: var(--acc-lt); color: var(--text); }
-.carrier-btn.loaded { border-color: var(--grn); background: var(--grn-lt); color: var(--grn); }
-.carrier-btn .cb-icon { font-size: 13px; flex-shrink: 0; opacity: .8; }
-.carrier-btn .cb-name { font-weight: 500; display: block; }
-.carrier-btn .cb-status { font-size: 10px; color: var(--muted); display: block; }
-.carrier-btn.loaded .cb-status { color: var(--grn); opacity: .8; }
-
-/* DATA STATUS */
-.data-status { display: flex; flex-direction: column; gap: 3px; }
-.ds-row { display: flex; align-items: center; gap: 7px; padding: 5px 6px; border-radius: var(--r); font-size: 11px; }
-.ds-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.ds-dot.ok { background: var(--grn); }
-.ds-dot.no { background: var(--bdr2); }
-.ds-dot.warn { background: var(--org); }
-.ds-label { flex: 1; color: var(--sub); }
-.ds-val { color: var(--muted); font-size: 10px; font-family: var(--mono); }
+.sgroup{display:flex;flex-direction:column;gap:3px}
+.sgroup-title{font-size:9px;text-transform:uppercase;letter-spacing:1.8px;color:var(--muted);font-weight:500;padding:0 4px 6px;border-bottom:1px solid var(--bdr);margin-bottom:3px}
+.carrier-btn{width:100%;padding:7px 10px;border:1px solid var(--bdr);border-radius:var(--r);background:var(--paper2);color:var(--sub);cursor:pointer;font-family:var(--sans);font-size:12px;display:flex;align-items:center;gap:9px;transition:all .12s;text-align:left}
+.carrier-btn:hover{border-color:var(--acc);background:var(--acc-lt);color:var(--text)}
+.carrier-btn.loaded{border-color:var(--grn);background:var(--grn-lt);color:var(--grn)}
+.carrier-btn .cb-name{font-weight:500;display:block}
+.carrier-btn .cb-status{font-size:10px;color:var(--muted);display:block}
+.carrier-btn.loaded .cb-status{color:var(--grn);opacity:.8}
+.ds-row{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:var(--r);font-size:11px}
+.ds-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ds-dot.ok{background:var(--grn)}.ds-dot.no{background:var(--bdr2)}.ds-dot.warn{background:var(--org)}
+.ds-label{flex:1;color:var(--sub)}.ds-val{color:var(--muted);font-size:10px;font-family:var(--mono)}
 
 /* BUTTONS */
-.btn { padding: 7px 16px; border-radius: var(--r); border: none; cursor: pointer; font-family: var(--sans); font-size: 12.5px; font-weight: 500; transition: all .12s; display: inline-flex; align-items: center; gap: 6px; letter-spacing: .2px; }
-.btn-primary { background: var(--acc); color: #fff; }
-.btn-primary:hover { background: #234d7a; }
-.btn-outline { background: var(--paper); border: 1px solid var(--bdr); color: var(--sub); }
-.btn-outline:hover { border-color: var(--acc); color: var(--acc); }
-.btn-red { background: var(--red-lt); border: 1px solid #e8b8b8; color: var(--red); }
-.btn-red:hover { background: #fbe5e5; }
-.btn-grn { background: var(--grn-lt); border: 1px solid #b0dcc0; color: var(--grn); }
-.btn-grn:hover { background: #dff2e8; }
-.btn-sm { padding: 5px 12px; font-size: 11.5px; }
-
-/* MONTH SELECT */
-.month-sel {
-  padding: 7px 12px; border-radius: var(--r); border: 1px solid var(--bdr);
-  background: var(--paper2); color: var(--text); font-family: var(--sans);
-  font-size: 12.5px; outline: none; cursor: pointer;
-}
-.month-sel:focus { border-color: var(--acc); }
+.btn{padding:7px 15px;border-radius:var(--r);border:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:500;transition:all .12s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--acc);color:#fff}.btn-primary:hover{background:#163d63}
+.btn-outline{background:var(--paper);border:1px solid var(--bdr);color:var(--sub)}.btn-outline:hover{border-color:var(--acc);color:var(--acc)}
+.btn-red{background:var(--red-lt);border:1px solid #e8b8b8;color:var(--red)}.btn-red:hover{background:#fbe5e5}
+.btn-grn{background:var(--grn-lt);border:1px solid #b0dcc0;color:var(--grn)}.btn-grn:hover{background:#dff2e8}
+.btn-sm{padding:5px 11px;font-size:11.5px}
+.sel{padding:7px 12px;border-radius:var(--r);border:1px solid var(--bdr);background:var(--paper2);color:var(--text);font-family:var(--sans);font-size:12.5px;outline:none;cursor:pointer}
+.sel:focus{border-color:var(--acc)}
 
 /* TABS */
-.tabs-wrap { border-bottom: 1px solid var(--bdr); margin-bottom: 22px; display: flex; gap: 0; }
-.tab {
-  padding: 9px 18px; font-size: 12.5px; color: var(--muted);
-  background: none; border: none; cursor: pointer;
-  border-bottom: 2px solid transparent; margin-bottom: -1px;
-  transition: all .12s; font-family: var(--sans); font-weight: 400;
-}
-.tab:hover { color: var(--text); }
-.tab.active { color: var(--acc); border-bottom-color: var(--acc); font-weight: 500; }
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.tabs{border-bottom:2px solid var(--bdr);margin-bottom:20px;display:flex;gap:0}
+.tab{padding:9px 17px;font-size:12.5px;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .12s;font-family:var(--sans)}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc);font-weight:500}
+.tab-panel{display:none}.tab-panel.active{display:block}
 
-/* PAGE TITLE */
-.page-header { margin-bottom: 20px; }
-.page-header h1 { font-family: var(--serif); font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-.page-header p { font-size: 12px; color: var(--muted); }
+/* P&L TABLE — the main financial statement */
+.pnl-table{width:100%;border-collapse:collapse;font-size:13px}
+.pnl-table td{padding:7px 14px;border-bottom:1px solid var(--bdr)}
+.pnl-table .row-label{color:var(--sub);font-family:var(--sans)}
+.pnl-table .row-label.indent{padding-left:28px;color:var(--muted)}
+.pnl-table .row-label.total{font-family:var(--serif);font-weight:700;font-size:14px;color:var(--text)}
+.pnl-table .row-label.section{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding-top:14px;padding-bottom:4px;border-bottom:none;background:var(--paper2)}
+.pnl-table .val{text-align:right;font-family:var(--mono);font-size:13px}
+.pnl-table .val.pos{color:var(--grn)}.pnl-table .val.neg{color:var(--red)}
+.pnl-table .val.total{font-family:var(--serif);font-size:15px;font-weight:700}
+.pnl-table .val.pct{font-size:11px;color:var(--muted);text-align:right;font-family:var(--mono)}
+.pnl-table .val.pct.pos{color:var(--grn)}.pnl-table .val.pct.neg{color:var(--red)}
+.pnl-table tr.separator td{border-bottom:2px solid var(--bdr2);padding:0;height:1px}
+.pnl-table tr.highlight td{background:var(--paper2)}
+.pnl-table th{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:8px 14px;text-align:right;font-weight:500;background:var(--paper2);border-bottom:2px solid var(--bdr2)}
+.pnl-table th:first-child{text-align:left}
 
-/* KPI CARDS */
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-.kpi-card {
-  background: var(--paper); border: 1px solid var(--bdr);
-  border-radius: var(--r); padding: 16px 18px;
-  box-shadow: var(--shadow);
-}
-.kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
-.kpi-val { font-family: var(--serif); font-size: 24px; font-weight: 700; line-height: 1; }
-.kpi-val.grn { color: var(--grn); }
-.kpi-val.red { color: var(--red); }
-.kpi-val.acc { color: var(--acc); }
-.kpi-val.org { color: var(--org); }
-.kpi-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+/* COMPARE COLUMNS */
+.col-a{border-left:2px solid var(--acc-lt)}.col-b{border-left:2px solid var(--grn-lt)}
+.col-delta{border-left:1px solid var(--bdr);color:var(--muted)}
+.col-delta.up{color:var(--grn)}.col-delta.down{color:var(--red)}
+
+/* SEMAPHORE GRID */
+.semaphore-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:18px}
+.sem-card{background:var(--paper);border:1px solid var(--bdr);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
+.sem-card.grn{border-left:4px solid var(--grn)}.sem-card.yel{border-left:4px solid #f0c040}.sem-card.red{border-left:4px solid var(--red)}
+.sem-country{font-weight:600;font-size:13px;margin-bottom:8px}
+.sem-metrics{display:flex;gap:8px}
+.sem-m{display:flex;flex-direction:column;align-items:center;flex:1}
+.sem-m-label{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:3px}
+.sem-m-val{font-family:var(--mono);font-size:13px;font-weight:500}
+.sem-m-val.pos{color:var(--grn)}.sem-m-val.neg{color:var(--red)}.sem-m-val.warn{color:#c0800a}
+
+/* ALERT CARDS */
+.alert-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.alert-card{background:var(--paper);border:1px solid var(--bdr);border-radius:var(--r);padding:12px 16px;display:flex;align-items:flex-start;gap:12px;box-shadow:var(--shadow)}
+.alert-card.urgent{border-left:4px solid var(--red)}
+.alert-card.warn{border-left:4px solid #f0c040}
+.alert-card.info{border-left:4px solid var(--acc)}
+.alert-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.alert-body{flex:1}
+.alert-title{font-weight:600;font-size:13px;margin-bottom:3px}
+.alert-desc{font-size:12px;color:var(--sub);line-height:1.5}
+.alert-action{font-size:11px;font-weight:500;margin-top:5px}
+.alert-action.red{color:var(--red)}.alert-action.org{color:var(--org)}.alert-action.acc{color:var(--acc)}
 
 /* CARDS */
-.card { background: var(--paper); border: 1px solid var(--bdr); border-radius: var(--r); box-shadow: var(--shadow); margin-bottom: 16px; }
-.card-header { padding: 14px 18px 0; border-bottom: 1px solid var(--bdr); margin-bottom: 0; display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; }
-.card-title { font-family: var(--serif); font-size: 13.5px; font-weight: 700; font-style: italic; color: var(--text); }
-.card-sub { font-size: 11px; color: var(--muted); }
-.card-body { padding: 16px 18px; }
+.card{background:var(--paper);border:1px solid var(--bdr);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden}
+.card-hdr{padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:baseline;justify-content:space-between;background:var(--paper2)}
+.card-title{font-family:var(--serif);font-size:13px;font-weight:700;font-style:italic}
+.card-sub{font-size:11px;color:var(--muted)}
 
-/* TABLE */
-.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.tbl thead tr { border-bottom: 2px solid var(--bdr); }
-.tbl th { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 8px 12px; text-align: left; font-weight: 500; background: var(--paper2); }
-.tbl th.r { text-align: right; }
-.tbl td { padding: 9px 12px; border-bottom: 1px solid var(--bdr); color: var(--text); }
-.tbl td.r { text-align: right; font-family: var(--mono); font-size: 12px; }
-.tbl tbody tr:hover td { background: var(--paper2); }
-.tbl tbody tr:last-child td { border-bottom: none; }
-.neg { color: var(--red); font-weight: 500; }
-.pos { color: var(--grn); font-weight: 500; }
-.dim { color: var(--muted); }
+/* GENERIC TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl thead th{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:8px 12px;text-align:left;font-weight:500;background:var(--paper2);border-bottom:1px solid var(--bdr2)}
+.tbl thead th.r{text-align:right}
+.tbl tbody td{padding:8px 12px;border-bottom:1px solid var(--bdr)}
+.tbl tbody td.r{text-align:right;font-family:var(--mono);font-size:12px}
+.tbl tbody tr:hover td{background:var(--paper2)}
+.tbl tbody tr:last-child td{border-bottom:none}
+.pos{color:var(--grn);font-weight:500}.neg{color:var(--red);font-weight:500}.dim{color:var(--muted)}
 
-/* BADGE */
-.badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10.5px; font-weight: 500; }
-.badge-red { background: var(--red-lt); color: var(--red); }
-.badge-grn { background: var(--grn-lt); color: var(--grn); }
-.badge-org { background: var(--org-lt); color: var(--org); }
-.badge-acc { background: var(--acc-lt); color: var(--acc); }
-
-/* ALERT STRIP */
-.alert-strip { background: var(--red-lt); border: 1px solid #e8b8b8; border-radius: var(--r); padding: 10px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; font-size: 12.5px; color: var(--red); }
-.alert-strip strong { font-weight: 600; }
-
-/* DIVIDER */
-.divider { height: 1px; background: var(--bdr); margin: 20px 0; }
-
-/* EMPTY STATE */
-.empty { text-align: center; padding: 56px 20px; }
-.empty-icon { font-size: 36px; opacity: .25; margin-bottom: 14px; }
-.empty-title { font-family: var(--serif); font-size: 16px; font-style: italic; color: var(--sub); margin-bottom: 6px; }
-.empty-sub { font-size: 12px; color: var(--muted); max-width: 320px; margin: 0 auto; }
+/* COMPARISON */
+.cmp-header{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.cmp-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.cmp-vs{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:13px}
 
 /* TOAST */
-#toast { position: fixed; bottom: 24px; right: 24px; background: var(--paper); border: 1px solid var(--bdr); border-radius: var(--r); padding: 11px 16px; font-size: 12.5px; z-index: 9999; display: none; max-width: 300px; box-shadow: var(--shadow-md); }
-#toast.success { border-color: #b0dcc0; color: var(--grn); background: var(--grn-lt); }
-#toast.error { border-color: #e8b8b8; color: var(--red); background: var(--red-lt); }
-#toast.info { border-color: #b8d0e8; color: var(--acc); background: var(--acc-lt); }
+#toast{position:fixed;bottom:22px;right:22px;background:var(--paper);border:1px solid var(--bdr);border-radius:var(--r);padding:10px 16px;font-size:12.5px;z-index:9999;display:none;max-width:300px;box-shadow:var(--shadow-md)}
+#toast.success{border-color:#b0dcc0;color:var(--grn);background:var(--grn-lt)}
+#toast.error{border-color:#e8b8b8;color:var(--red);background:var(--red-lt)}
+#toast.info{border-color:#b8d0e8;color:var(--acc);background:var(--acc-lt)}
 
 /* LOADING */
-.spin { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--bdr); border-top-color: var(--acc); border-radius: 50%; animation: spin .7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.loading-overlay { display: none; position: fixed; inset: 0; background: rgba(247,245,240,.75); backdrop-filter: blur(2px); z-index: 500; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
-.loading-overlay.show { display: flex; }
-.loading-card { background: var(--paper); border: 1px solid var(--bdr); border-radius: var(--r); padding: 28px 40px; display: flex; flex-direction: column; align-items: center; gap: 14px; box-shadow: var(--shadow-md); }
-.loading-msg { font-size: 13px; color: var(--sub); }
-.progress-bar { height: 3px; background: var(--bdr); border-radius: 2px; overflow: hidden; width: 200px; }
-.progress-fill { height: 100%; background: var(--acc); border-radius: 2px; transition: width .3s; width: 0%; }
+.spin{display:inline-block;width:18px;height:18px;border:2px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(245,243,238,.8);backdrop-filter:blur(2px);z-index:500;align-items:center;justify-content:center}
+.loading-overlay.show{display:flex}
+.loading-card{background:var(--paper);border:1px solid var(--bdr);border-radius:var(--r);padding:24px 36px;display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:var(--shadow-md)}
+.loading-msg{font-size:13px;color:var(--sub)}
+.prog-bar{height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;width:180px}
+.prog-fill{height:100%;background:var(--acc);border-radius:2px;transition:width .3s;width:0%}
 
-input[type=file] { display: none; }
+/* EMPTY */
+.empty{text-align:center;padding:52px 20px}
+.empty-icon{font-size:32px;opacity:.2;margin-bottom:12px}
+.empty-title{font-family:var(--serif);font-size:15px;font-style:italic;color:var(--sub);margin-bottom:5px}
+.empty-sub{font-size:12px;color:var(--muted);max-width:300px;margin:0 auto}
 
-@media(max-width:900px) {
-  .layout { grid-template-columns: 1fr; }
-  .sidebar { border-right: none; border-bottom: 1px solid var(--bdr); }
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
-}
+input[type=file]{display:none}
 </style>
 </head>
 <body>
 
-<div class="loading-overlay" id="loading-overlay">
+<div class="loading-overlay" id="lo">
   <div class="loading-card">
     <div class="spin"></div>
-    <div class="loading-msg" id="loading-msg">Procesando...</div>
-    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="loading-msg" id="lm">Calculando...</div>
+    <div class="prog-bar"><div class="prog-fill" id="pf"></div></div>
   </div>
 </div>
-
 <div id="toast"></div>
 
 <header>
-  <div class="logo">
-    Farma2go
-    <span class="sep">/</span>
-    <span class="sub">Shipping P&L</span>
-  </div>
+  <div class="logo">Farma2go <span class="slash">/</span> <span class="sub">Shipping P&L</span></div>
   <div class="header-right">
-    <select class="month-sel" id="global-month" onchange="loadPnl()">
-      <option value="">Todos los meses</option>
-    </select>
+    <select class="sel" id="global-month" onchange="loadPnl()"><option value="">Todos los meses</option></select>
     <button class="btn btn-primary" onclick="loadPnl()">Calcular P&L</button>
     <button class="btn btn-grn" onclick="exportExcel()">↓ Excel</button>
-    <button class="btn btn-red" id="btn-reclamaciones" onclick="exportReclamaciones()" style="display:none">Reclamar</button>
+    <button class="btn btn-red" id="btn-rec" onclick="exportReclamaciones()" style="display:none">Reclamar</button>
   </div>
 </header>
 
 <div class="layout">
-
 <aside class="sidebar">
-
   <div class="sgroup">
     <div class="sgroup-title">Facturas transportistas</div>
-    <button class="carrier-btn" id="btn-ctt" onclick="triggerUpload('ctt')">
-      <span class="cb-icon">📦</span>
-      <span><span class="cb-name">CTT Express</span><span class="cb-status">Excel (.xlsx)</span></span>
-    </button>
-    <button class="carrier-btn" id="btn-inpost" onclick="triggerUpload('inpost')">
-      <span class="cb-icon">🟡</span>
-      <span><span class="cb-name">InPost</span><span class="cb-status">ZIP con CSV</span></span>
-    </button>
-    <button class="carrier-btn" id="btn-spring" onclick="triggerUpload('spring')">
-      <span class="cb-icon">🌱</span>
-      <span><span class="cb-name">Spring</span><span class="cb-status">Excel (.xlsx)</span></span>
-    </button>
-    <button class="carrier-btn" id="btn-gls" onclick="triggerUpload('gls')">
-      <span class="cb-icon">🔵</span>
-      <span><span class="cb-name">GLS</span><span class="cb-status">Excel (.xlsx)</span></span>
-    </button>
-    <button class="carrier-btn" id="btn-ups" onclick="triggerUpload('ups')">
-      <span class="cb-icon">🟤</span>
-      <span><span class="cb-name">UPS</span><span class="cb-status">CSV</span></span>
-    </button>
-    <button class="carrier-btn" id="btn-asendia" onclick="triggerUpload('asendia')">
-      <span class="cb-icon">✉️</span>
-      <span><span class="cb-name">Asendia</span><span class="cb-status">Excel (.xlsx)</span></span>
-    </button>
+    <button class="carrier-btn" id="btn-ctt"     onclick="triggerUpload('ctt')">    <span>📦</span><span><span class="cb-name">CTT Express</span><span class="cb-status">Excel (.xlsx)</span></span></button>
+    <button class="carrier-btn" id="btn-inpost"  onclick="triggerUpload('inpost')"> <span>🟡</span><span><span class="cb-name">InPost</span><span class="cb-status">ZIP con CSV</span></span></button>
+    <button class="carrier-btn" id="btn-spring"  onclick="triggerUpload('spring')"> <span>🌱</span><span><span class="cb-name">Spring</span><span class="cb-status">Excel (.xlsx)</span></span></button>
+    <button class="carrier-btn" id="btn-gls"     onclick="triggerUpload('gls')">    <span>🔵</span><span><span class="cb-name">GLS</span><span class="cb-status">Excel (.xlsx)</span></span></button>
+    <button class="carrier-btn" id="btn-ups"     onclick="triggerUpload('ups')">    <span>🟤</span><span><span class="cb-name">UPS</span><span class="cb-status">CSV</span></span></button>
+    <button class="carrier-btn" id="btn-asendia" onclick="triggerUpload('asendia')"><span>✉️</span><span><span class="cb-name">Asendia</span><span class="cb-status">Excel (.xlsx)</span></span></button>
   </div>
-
   <div class="sgroup">
     <div class="sgroup-title">Ventas &amp; Ingresos</div>
-    <button class="carrier-btn" id="btn-odoo" onclick="triggerUpload('odoo')">
-      <span class="cb-icon">🛒</span>
-      <span><span class="cb-name">Odoo — Ventas</span><span class="cb-status">sale_order__.xlsx</span></span>
-    </button>
-    <button class="carrier-btn" id="btn-shopify" onclick="triggerUpload('shopify')">
-      <span class="cb-icon">💳</span>
-      <span><span class="cb-name">Shopify revenue</span><span class="cb-status">CSV precios envío</span></span>
-    </button>
+    <button class="carrier-btn" id="btn-odoo"    onclick="triggerUpload('odoo')">   <span>🛒</span><span><span class="cb-name">Odoo — Ventas</span><span class="cb-status">sale_order__.xlsx</span></span></button>
+    <button class="carrier-btn" id="btn-shopify" onclick="triggerUpload('shopify')"><span>💳</span><span><span class="cb-name">Shopify revenue</span><span class="cb-status">CSV precios envío</span></span></button>
   </div>
-
   <div class="sgroup">
     <div class="sgroup-title">Marketing</div>
-    <button class="carrier-btn" id="btn-ads" onclick="triggerUpload('ads')">
-      <span class="cb-icon">📣</span>
-      <span><span class="cb-name">Google Ads</span><span class="cb-status">Inversión_Google_Ads.xlsx</span></span>
-    </button>
+    <button class="carrier-btn" id="btn-ads" onclick="triggerUpload('ads')"><span>📣</span><span><span class="cb-name">Google Ads</span><span class="cb-status">Inversión_Google_Ads.xlsx</span></span></button>
   </div>
-
-  <div class="sgroup" style="margin-top:auto; padding-top:12px; border-top:1px solid var(--bdr);">
+  <div class="sgroup" style="margin-top:auto;padding-top:12px;border-top:1px solid var(--bdr)">
     <div class="sgroup-title">Datos cargados</div>
-    <div class="data-status" id="data-status">
-      <div class="ds-row"><div class="ds-dot no"></div><div class="ds-label">Sin datos cargados</div></div>
-    </div>
-    <button class="btn btn-outline btn-sm" style="margin-top:8px; width:100%; justify-content:center;" onclick="clearAll()">Limpiar todo</button>
-    <input type="file" id="file-seed" accept=".zip" onchange="uploadSeed(this)" style="display:none">
-    <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-top:4px;" onclick="document.getElementById('file-seed').click()">↑ Importar histórico</button>
+    <div id="data-status"><div class="ds-row"><div class="ds-dot no"></div><div class="ds-label">Sin datos</div></div></div>
+    <input type="file" id="file-seed" accept=".zip" onchange="uploadSeed(this)">
+    <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-top:6px" onclick="document.getElementById('file-seed').click()">↑ Importar histórico</button>
+    <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-top:4px" onclick="clearAll()">Limpiar todo</button>
   </div>
-
 </aside>
 
 <main class="main">
-
-  <div class="tabs-wrap">
-    <button class="tab active" onclick="setTab('resumen')">Resumen</button>
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('resumen')">P&L</button>
     <button class="tab" onclick="setTab('paises')">Por País</button>
+    <button class="tab" onclick="setTab('evolucion')">Evolución</button>
+    <button class="tab" onclick="setTab('comparar')">Comparar</button>
     <button class="tab" onclick="setTab('carriers')">Carriers</button>
     <button class="tab" onclick="setTab('alertas')">Reclamaciones</button>
-    <button class="tab" onclick="setTab('evolucion')">Evolución País</button>
     <button class="tab" onclick="setTab('ads')">Google Ads</button>
   </div>
 
-  <!-- RESUMEN -->
+  <!-- P&L RESUMEN -->
   <div class="tab-panel active" id="panel-resumen">
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-label">Margen post-Ads</div>
-        <div class="kpi-val grn" id="kpi-mg">—</div>
-        <div class="kpi-sub" id="kpi-mg-sub">producto + envío − publicidad</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">% Margen post-Ads</div>
-        <div class="kpi-val acc" id="kpi-pct">—</div>
-        <div class="kpi-sub">sobre venta total</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Margen envíos</div>
-        <div class="kpi-val" id="kpi-ship">—</div>
-        <div class="kpi-sub">cobrado − coste carrier</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Reclamaciones</div>
-        <div class="kpi-val red" id="kpi-alerts">—</div>
-        <div class="kpi-sub" id="kpi-alerts-sub">envíos con pérdida anormal</div>
-      </div>
-    </div>
-    <div id="resumen-content">
-      <div class="empty">
-        <div class="empty-icon">◎</div>
-        <div class="empty-title">Carga datos para ver el P&L</div>
-        <div class="empty-sub">Sube las facturas de transportistas y el listado de ventas de Odoo</div>
-      </div>
+    <div id="alerts-strip"></div>
+    <div id="semaphore"></div>
+    <div id="pnl-content">
+      <div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Carga datos para ver el P&L</div><div class="empty-sub">Sube las facturas de transportistas y el export de Odoo</div></div>
     </div>
   </div>
 
-  <!-- PAÍSES -->
+  <!-- POR PAÍS -->
   <div class="tab-panel" id="panel-paises">
-    <div id="paises-content">
-      <div class="empty">
-        <div class="empty-icon">◎</div>
-        <div class="empty-title">Sin datos por país</div>
-        <div class="empty-sub">Sube el listado de ventas de Odoo para el desglose por país</div>
-      </div>
+    <div id="paises-content"><div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Sin datos por país</div></div></div>
+  </div>
+
+  <!-- EVOLUCIÓN -->
+  <div class="tab-panel" id="panel-evolucion">
+    <div id="evolucion-content"><div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Calcula el P&L primero</div></div></div>
+  </div>
+
+  <!-- COMPARAR -->
+  <div class="tab-panel" id="panel-comparar">
+    <div class="cmp-header">
+      <span class="cmp-label">Comparar</span>
+      <select class="sel" id="cmp-a"><option value="">Período A</option></select>
+      <span class="cmp-vs">vs</span>
+      <select class="sel" id="cmp-b"><option value="">Período B</option></select>
+      <button class="btn btn-primary btn-sm" onclick="runCompare()">Comparar</button>
     </div>
+    <div id="compare-content"><div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Selecciona dos períodos y pulsa Comparar</div></div></div>
   </div>
 
   <!-- CARRIERS -->
   <div class="tab-panel" id="panel-carriers">
-    <div id="carriers-content">
-      <div class="empty">
-        <div class="empty-icon">◎</div>
-        <div class="empty-title">Sin facturas de transportistas</div>
-        <div class="empty-sub">Sube las facturas de CTT, InPost, Spring, GLS o UPS</div>
-      </div>
-    </div>
+    <div id="carriers-content"><div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Sin facturas de transportistas</div></div></div>
   </div>
 
-  <!-- ALERTAS -->
+  <!-- RECLAMACIONES -->
   <div class="tab-panel" id="panel-alertas">
-    <div id="alertas-content">
-      <div class="empty">
-        <div class="empty-icon">◎</div>
-        <div class="empty-title">Sin alertas detectadas</div>
-        <div class="empty-sub">Las alertas aparecen cuando el coste supera 3× lo cobrado y la pérdida es mayor de 8€</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- EVOLUCIÓN POR PAÍS -->
-  <div class="tab-panel" id="panel-evolucion">
-    <div id="evolucion-content">
-      <div class="empty">
-        <div class="empty-icon">◎</div>
-        <div class="empty-title">Sin datos de evolución</div>
-        <div class="empty-sub">Calcula el P&L primero</div>
-      </div>
-    </div>
+    <div id="alertas-content"><div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Sin alertas detectadas</div><div class="empty-sub">Las alertas aparecen cuando el coste supera 3× lo cobrado y la pérdida es mayor de 8€</div></div></div>
   </div>
 
   <!-- ADS -->
   <div class="tab-panel" id="panel-ads">
-    <div id="ads-content">
-      <div class="empty">
-        <div class="empty-icon">◎</div>
-        <div class="empty-title">Sin datos de publicidad</div>
-        <div class="empty-sub">Sube el archivo de inversión de Google Ads</div>
-      </div>
-    </div>
+    <div id="ads-content"><div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Sin datos de publicidad</div></div></div>
   </div>
-
 </main>
 </div>
 
-<!-- File inputs -->
 <input type="file" id="file-ctt"     accept=".xlsx,.xls" onchange="uploadFile('ctt',this)">
 <input type="file" id="file-inpost"  accept=".zip,.csv"  onchange="uploadFile('inpost',this)">
 <input type="file" id="file-spring"  accept=".xlsx,.xls" onchange="uploadFile('spring',this)">
@@ -481,392 +338,455 @@ input[type=file] { display: none; }
 <script>
 let pnlData = null;
 
-function triggerUpload(carrier) { document.getElementById('file-' + carrier).click(); }
-
-function fmtEur(v, dec=0) {
-  if (v === null || v === undefined || isNaN(v)) return '—';
-  const abs = Math.abs(v).toLocaleString('es-ES', {minimumFractionDigits:dec, maximumFractionDigits:dec});
-  return (v < 0 ? '−' : '+') + abs + '\u202f€';
+// ── UTILS ──────────────────────────────────────────────────────
+function fe(v,d=0){
+  if(v==null||isNaN(v)) return '—';
+  const s=Math.abs(v).toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d});
+  return (v<0?'−':'')+s+'\u202f€';
 }
-function fmtN(v) { return v == null ? '—' : Number(v).toLocaleString('es-ES'); }
-function fmtPct(v) { if (v == null || isNaN(v)) return '—'; return (v*100).toFixed(1) + '%'; }
-function clsM(v) { return v == null ? '' : v >= 0 ? 'pos' : 'neg'; }
-
-function showToast(msg, type='info') {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = type; t.style.display = 'block';
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.style.display = 'none', 4000);
+function fp(v){return v==null||isNaN(v)?'—':(v*100).toFixed(1)+'%'}
+function fn(v){return v==null?'—':Number(v).toLocaleString('es-ES')}
+function cm(v){return v==null?'':v>=0?'pos':'neg'}
+function delta(b,a,pct=false){
+  if(b==null||a==null) return {v:null,cls:'',str:'—'};
+  const d=b-a;
+  const cls=d>0?'up':d<0?'down':'';
+  const str=pct?fp(d):(d>=0?'+':'')+fe(d,0);
+  return {v:d,cls,str};
 }
-function showLoading(msg='Procesando...') {
-  document.getElementById('loading-msg').textContent = msg;
-  document.getElementById('loading-overlay').classList.add('show');
-  document.getElementById('progress-fill').style.width = '0%';
-}
-function hideLoading() { document.getElementById('loading-overlay').classList.remove('show'); }
-function setProgress(p) { document.getElementById('progress-fill').style.width = p + '%'; }
 
-async function uploadFile(carrier, input) {
-  const file = input.files[0]; if (!file) return;
-  showLoading('Procesando ' + carrier.toUpperCase() + '…');
-  const fd = new FormData(); fd.append('file', file); fd.append('carrier', carrier);
-  try {
-    setProgress(30);
-    const res = await fetch('/upload', { method: 'POST', body: fd });
-    setProgress(80);
-    const data = await res.json();
-    setProgress(100); hideLoading();
-    if (data.ok) {
-      showToast(carrier.toUpperCase() + ': ' + data.rows + ' envíos cargados', 'success');
-      const btn = document.getElementById('btn-' + carrier);
-      if (btn) {
-        btn.classList.add('loaded');
-        btn.querySelector('.cb-status').textContent = '✓ ' + data.rows + (data.months ? '  ·  ' + data.months : '');
-      }
+// ── LOADING ────────────────────────────────────────────────────
+function showL(msg='Calculando...'){document.getElementById('lm').textContent=msg;document.getElementById('lo').classList.add('show');document.getElementById('pf').style.width='0%'}
+function hideL(){document.getElementById('lo').classList.remove('show')}
+function prog(p){document.getElementById('pf').style.width=p+'%'}
+
+function toast(msg,type='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className=type;t.style.display='block';
+  clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',4000);
+}
+
+function triggerUpload(c){document.getElementById('file-'+c).click()}
+
+async function uploadFile(carrier,input){
+  const file=input.files[0];if(!file)return;
+  showL('Procesando '+carrier.toUpperCase()+'…');
+  const fd=new FormData();fd.append('file',file);fd.append('carrier',carrier);
+  try{
+    prog(30);
+    const res=await fetch('/upload',{method:'POST',body:fd});prog(85);
+    const data=await res.json();prog(100);hideL();
+    if(data.ok){
+      toast(carrier.toUpperCase()+': '+data.rows+' envíos cargados','success');
+      const btn=document.getElementById('btn-'+carrier);
+      if(btn){btn.classList.add('loaded');btn.querySelector('.cb-status').textContent='✓ '+data.rows+(data.months?' · '+data.months:'');}
       refreshStatus();
-    } else { showToast('Error en ' + carrier + ': ' + data.error, 'error'); }
-  } catch(e) { hideLoading(); showToast('Error de conexión: ' + e.message, 'error'); }
-  input.value = '';
+    }else toast('Error en '+carrier+': '+data.error,'error');
+  }catch(e){hideL();toast('Error: '+e.message,'error')}
+  input.value='';
 }
 
-async function loadPnl() {
-  const month = document.getElementById('global-month').value;
-  showLoading('Calculando P&L…');
-  try {
-    setProgress(50);
-    const res = await fetch('/pnl?month=' + encodeURIComponent(month));
-    setProgress(90);
-    const data = await res.json();
-    hideLoading();
-    if (data.error) { showToast(data.error, 'error'); return; }
-    pnlData = data; renderPnl(data);
-    showToast('P&L actualizado', 'success');
-  } catch(e) { hideLoading(); showToast('Error: ' + e.message, 'error'); }
+async function uploadSeed(input){
+  const file=input.files[0];if(!file)return;
+  showL('Importando histórico…');
+  const fd=new FormData();fd.append('file',file);
+  try{
+    prog(40);const res=await fetch('/seed',{method:'POST',body:fd});prog(90);
+    const data=await res.json();hideL();
+    if(data.ok){toast('Importado: '+data.imported.join(', '),'success');refreshStatus();await loadPnl();}
+    else toast('Error: '+data.error,'error');
+  }catch(e){hideL();toast('Error: '+e.message,'error')}
+  input.value='';
 }
 
-function renderPnl(data) {
-  // KPIs
-  if (data.pnl_by_country) {
-    const R = data.pnl_by_country;
-    const mg     = R.reduce((a,r) => a+(r.mg_final||0), 0);
-    const mgPost = R.reduce((a,r) => a+(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0), 0);
-    const ads    = R.reduce((a,r) => a+(r.gasto_ads||0), 0);
-    const vta    = R.reduce((a,r) => a+(r.venta||0), 0);
-    const inge   = R.reduce((a,r) => a+(r.ing_envio||0), 0);
-    const cste   = R.reduce((a,r) => a+(r.cost_envio||0), 0);
-    const pct    = (vta+inge) > 0 ? mgPost/(vta+inge) : null;
-    const mge    = inge - cste;
-    set('kpi-mg', fmtEur(mgPost,0), mgPost>=0?'grn':'red');
-    const sub = document.getElementById('kpi-mg-sub');
-    if (sub && ads>0) sub.textContent = 'sin Ads (−' + Math.round(ads).toLocaleString('es-ES') + '€ publicidad)';
-    set('kpi-pct', fmtPct(pct), pct&&pct>=0?'acc':'red');
-    set('kpi-ship', fmtEur(mge,0), mge>=0?'grn':'red');
-  } else if (data.country_shipping) {
-    const mge = data.country_shipping.reduce((a,r) => a+(r.margen_envio||0), 0);
-    set('kpi-ship', fmtEur(mge,0), mge>=0?'grn':'red');
-  }
-  if (data.alert_count != null) {
-    set('kpi-alerts', fmtN(data.alert_count), 'red');
-    document.getElementById('kpi-alerts-sub').textContent = 'Pérdida total: ' + fmtEur(data.alert_total_loss||0,0);
-    document.getElementById('btn-reclamaciones').style.display = data.alert_count > 0 ? 'inline-flex' : 'none';
-  }
-  renderResumen(data); renderPaises(data); renderCarriers(data); renderAlertas(data); renderAds(data); renderEvolucion(data);
+// ── P&L LOAD & RENDER ──────────────────────────────────────────
+async function loadPnl(){
+  const month=document.getElementById('global-month').value;
+  showL('Calculando P&L…');
+  try{
+    prog(50);const res=await fetch('/pnl?month='+encodeURIComponent(month));prog(90);
+    const data=await res.json();hideL();
+    if(data.error){toast(data.error,'error');return;}
+    pnlData=data;renderAll(data);toast('P&L actualizado','success');
+  }catch(e){hideL();toast('Error: '+e.message,'error')}
 }
 
-function set(id, val, colorClass) {
-  const el = document.getElementById(id);
-  el.textContent = val;
-  el.className = 'kpi-val' + (colorClass ? ' ' + colorClass : '');
+function renderAll(data){
+  renderPnlTable(data);
+  renderSemaphore(data);
+  renderAlertStrip(data);
+  renderPaises(data);
+  renderEvolucion(data);
+  renderCarriers(data);
+  renderAlertas(data);
+  renderAds(data);
 }
 
-function card(title, sub, bodyHtml) {
-  return `<div class="card">
-    <div class="card-header"><span class="card-title">${title}</span>${sub?`<span class="card-sub">${sub}</span>`:''}  </div>
-    <div class="card-body" style="padding:0;overflow-x:auto">${bodyHtml}</div>
+// ── P&L TABLE ─────────────────────────────────────────────────
+function renderPnlTable(data){
+  const R=data.pnl_by_country||[];
+  if(!R.length){document.getElementById('pnl-content').innerHTML='';return;}
+
+  const venta    =R.reduce((a,r)=>a+(r.venta||0),0);
+  const cogs     =R.reduce((a,r)=>a+(r.cogs||0),0);
+  const mg_prod  =R.reduce((a,r)=>a+(r.mg_prod||0),0);
+  const ing_env  =R.reduce((a,r)=>a+(r.ing_envio||0),0);
+  const cost_env =R.reduce((a,r)=>a+(r.cost_envio||0),0);
+  const mg_env   =ing_env-cost_env;
+  const mg_final =R.reduce((a,r)=>a+(r.mg_final||0),0);
+  const ads      =R.reduce((a,r)=>a+(r.gasto_ads||0),0);
+  const mg_post  =R.reduce((a,r)=>a+(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0),0);
+  const n_ped    =R.reduce((a,r)=>a+(r.n_pedidos||0),0);
+  const base     =venta+ing_env;
+
+  const month=document.getElementById('global-month').value;
+  const label=month?month:'Acumulado';
+
+  const html=`
+  <div class="card">
+    <div class="card-hdr"><span class="card-title">Cuenta de resultados — ${label}</span><span class="card-sub">${fn(n_ped)} pedidos</span></div>
+    <table class="pnl-table">
+      <colgroup><col style="width:55%"><col style="width:22%"><col style="width:23%"></colgroup>
+      <tr class="highlight"><td class="row-label section" colspan="3">INGRESOS</td></tr>
+      <tr><td class="row-label indent">Venta bruta productos</td><td class="val">${fe(venta,0)}</td><td class="val pct"></td></tr>
+      <tr><td class="row-label indent">Ingreso envío cobrado</td><td class="val">${fe(ing_env,0)}</td><td class="val pct"></td></tr>
+      <tr class="highlight"><td class="row-label section" colspan="3">COSTES</td></tr>
+      <tr><td class="row-label indent">Coste de mercancía (COGS)</td><td class="val neg">− ${fe(cogs,0)}</td><td class="val pct neg">${fp(cogs/venta)}</td></tr>
+      <tr class="separator"><td colspan="3"></td></tr>
+      <tr class="highlight"><td class="row-label total">Margen bruto producto</td><td class="val total ${cm(mg_prod)}">${fe(mg_prod,0)}</td><td class="val pct ${cm(mg_prod/venta)}">${fp(mg_prod/venta)}</td></tr>
+      <tr class="separator"><td colspan="3"></td></tr>
+      <tr><td class="row-label indent">Coste envío (carriers)</td><td class="val neg">− ${fe(cost_env,0)}</td><td class="val pct"></td></tr>
+      <tr class="separator"><td colspan="3"></td></tr>
+      <tr class="highlight"><td class="row-label total">Margen envío</td><td class="val total ${cm(mg_env)}">${fe(mg_env,0)}</td><td class="val pct ${cm(mg_env/base)}">${fp(mg_env/base)}</td></tr>
+      <tr class="separator"><td colspan="3"></td></tr>
+      <tr class="highlight" style="background:var(--acc-lt)"><td class="row-label total" style="color:var(--acc)">MARGEN OPERATIVO</td><td class="val total ${cm(mg_final)}" style="font-size:17px">${fe(mg_final,0)}</td><td class="val pct ${cm(mg_final/base)}" style="font-size:12px">${fp(mg_final/base)}</td></tr>
+      ${ads>0?`
+      <tr><td class="row-label section" colspan="3">MARKETING</td></tr>
+      <tr><td class="row-label indent">Google Ads</td><td class="val neg">− ${fe(ads,0)}</td><td class="val pct neg">${fp(ads/base)}</td></tr>
+      <tr class="separator"><td colspan="3"></td></tr>
+      <tr class="highlight" style="background:${mg_post>=0?'var(--grn-lt)':'var(--red-lt)'}"><td class="row-label total">RESULTADO FINAL</td><td class="val total ${cm(mg_post)}" style="font-size:17px">${fe(mg_post,0)}</td><td class="val pct ${cm(mg_post/base)}" style="font-size:12px">${fp(mg_post/base)}</td></tr>
+      `:''}
+    </table>
   </div>`;
+  document.getElementById('pnl-content').innerHTML=html;
 }
 
-function renderResumen(data) {
-  if (!data.pnl_by_country && !data.country_shipping) return;
-  let html = '';
-  if (data.pnl_by_country) {
-    const byM = {};
-    data.pnl_by_country.forEach(r => {
-      if (!byM[r.ym]) byM[r.ym] = {venta:0,mg_prod:0,ing_envio:0,cost_envio:0,mg_final:0,n_pedidos:0};
-      Object.keys(byM[r.ym]).forEach(k => byM[r.ym][k] += (r[k]||0));
-    });
-    const months = Object.keys(byM).sort();
-    let tbl = `<table class="tbl"><thead><tr>
-      <th>Mes</th><th class="r">Pedidos</th><th class="r">Venta</th><th class="r">Mg Producto</th><th class="r">% Mg</th><th class="r">Coste Envío</th><th class="r">Mg Envío</th><th class="r">Margen Final</th></tr></thead><tbody>`;
-    let tV=0,tMp=0,tCe=0,tMf=0,tN=0,tIe=0;
-    months.forEach(ym => {
-      const d=byM[ym]; const pct=(d.venta+d.ing_envio)?d.mg_final/(d.venta+d.ing_envio):0;
-      tV+=d.venta;tMp+=d.mg_prod;tCe+=d.cost_envio;tMf+=d.mg_final;tN+=d.n_pedidos;tIe+=d.ing_envio;
-      const mge = d.ing_envio - d.cost_envio;
-      tbl+=`<tr><td>${ym}</td><td class="r dim">${fmtN(d.n_pedidos)}</td>
-        <td class="r">${fmtEur(d.venta,0)}</td>
-        <td class="r ${clsM(d.mg_prod)}">${fmtEur(d.mg_prod,0)}</td>
-        <td class="r ${clsM(pct)}">${fmtPct(pct)}</td>
-        <td class="r neg">${fmtEur(-d.cost_envio,0).replace('−','')}</td>
-        <td class="r ${clsM(mge)}">${fmtEur(mge,0)}</td>
-        <td class="r ${clsM(d.mg_final)}"><strong>${fmtEur(d.mg_final,0)}</strong></td></tr>`;
-    });
-    const totPct=(tV+tIe)?tMf/(tV+tIe):0; const totMge=tIe-tCe;
-    tbl+=`</tbody><tfoot><tr style="border-top:2px solid var(--bdr2)">
-      <td><strong>Total</strong></td><td class="r">${fmtN(tN)}</td>
-      <td class="r">${fmtEur(tV,0)}</td><td class="r ${clsM(tMp)}">${fmtEur(tMp,0)}</td>
-      <td class="r ${clsM(totPct)}">${fmtPct(totPct)}</td>
-      <td class="r neg">${fmtEur(-tCe,0).replace('−','')}</td>
-      <td class="r ${clsM(totMge)}">${fmtEur(totMge,0)}</td>
-      <td class="r ${clsM(tMf)}"><strong>${fmtEur(tMf,0)}</strong></td>
-    </tr></tfoot></table>`;
-    html = card('P&L Mensual', '', tbl);
-  }
-  document.getElementById('resumen-content').innerHTML = html || '<div class="empty"><div class="empty-icon">◎</div><div class="empty-title">Sin datos suficientes</div></div>';
+// ── SEMAPHORE ─────────────────────────────────────────────────
+function renderSemaphore(data){
+  const R=data.pnl_by_country||[];if(!R.length){document.getElementById('semaphore').innerHTML='';return;}
+  const COUNTRIES=['España','Portugal','Francia','Italia','Alemania','Reino Unido'];
+  const byC={};
+  R.forEach(r=>{
+    if(!byC[r.country])byC[r.country]={venta:0,mg_prod:0,ing_envio:0,cost_envio:0,mg_final:0,gasto_ads:0,mg_post_ads:0};
+    ['venta','mg_prod','ing_envio','cost_envio','mg_final','gasto_ads'].forEach(k=>byC[r.country][k]+=(r[k]||0));
+    byC[r.country].mg_post_ads+=(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0);
+  });
+  const cards=COUNTRIES.filter(c=>byC[c]&&byC[c].venta>0).map(c=>{
+    const d=byC[c];
+    const base=d.venta+d.ing_envio;
+    const pp=d.venta?d.mg_prod/d.venta:0;
+    const pe=base?(d.ing_envio-d.cost_envio)/base:0;
+    const pa=base?d.mg_post_ads/base:0;
+    const overall=pa>0.08?'grn':pa>0.02?'yel':'red';
+    const mv=(v,thr1,thr2)=>v>thr1?'pos':v>thr2?'warn':'neg';
+    return `<div class="sem-card ${overall}">
+      <div class="sem-country">${c}</div>
+      <div class="sem-metrics">
+        <div class="sem-m"><div class="sem-m-label">Mg Prod</div><div class="sem-m-val ${mv(pp,.15,.08)}">${fp(pp)}</div></div>
+        <div class="sem-m"><div class="sem-m-label">Mg Envío</div><div class="sem-m-val ${mv(pe,.02,0)}">${fp(pe)}</div></div>
+        <div class="sem-m"><div class="sem-m-label">Post-Ads</div><div class="sem-m-val ${mv(pa,.08,.02)}">${fp(pa)}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('semaphore').innerHTML=`<div class="semaphore-grid" style="margin-bottom:16px">${cards}</div>`;
 }
 
-function renderPaises(data) {
-  if (!data.pnl_by_country) return;
-  const byC = {};
-  data.pnl_by_country.forEach(r => {
-    const c = r.country||'Desconocido';
-    if (!byC[c]) byC[c]={venta:0,cogs:0,mg_prod:0,ing_envio:0,cost_envio:0,mg_final:0,n_pedidos:0};
-    Object.keys(byC[c]).forEach(k => byC[c][k]+=(r[k]||0));
+// ── ALERT STRIP ────────────────────────────────────────────────
+function renderAlertStrip(data){
+  const R=data.pnl_by_country||[];
+  const ship=data.shipping||[];
+  const ads=data.ads||[];
+  const alerts=[];
+
+  // Alert: country losing money post-ads
+  const byC={};
+  R.forEach(r=>{
+    if(!byC[r.country])byC[r.country]={mg_post_ads:0,venta:0,ing_envio:0,gasto_ads:0};
+    byC[r.country].mg_post_ads+=(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0);
+    byC[r.country].venta+=(r.venta||0);byC[r.country].ing_envio+=(r.ing_envio||0);
+    byC[r.country].gasto_ads+=(r.gasto_ads||0);
   });
-  const sorted = Object.entries(byC).sort((a,b) => b[1].venta-a[1].venta);
-  // Also accumulate ads per country
-  const adsByC = {};
-  (data.pnl_by_country||[]).forEach(r => {
-    if (!adsByC[r.country]) adsByC[r.country]=0;
-    adsByC[r.country]+=(r.gasto_ads||0);
+  Object.entries(byC).forEach(([c,d])=>{
+    const base=d.venta+d.ing_envio;const pct=base?d.mg_post_ads/base:0;
+    if(d.venta>5000&&pct<0)alerts.push({type:'urgent',icon:'🔴',title:`${c}: resultado negativo después de Ads`,desc:`Margen post-Ads ${fp(pct)} (${fe(d.mg_post_ads,0)}). Los Ads cuestan ${fe(d.gasto_ads,0)}.`,action:`Reducir inversión en Ads o revisar precio de envío en ${c}`,cls:'red'});
+    else if(d.venta>5000&&pct<0.03)alerts.push({type:'warn',icon:'🟡',title:`${c}: margen muy ajustado post-Ads`,desc:`Solo un ${fp(pct)} de margen final. Cualquier subida de costes lo pondría en negativo.`,action:`Revisar estructura de costes en ${c}`,cls:'org'});
   });
-  let tbl = `<table class="tbl"><thead><tr><th>País</th><th class="r">Pedidos</th><th class="r">Venta</th><th class="r">Mg Producto</th><th class="r">Mg Envío</th><th class="r">Margen Final</th><th class="r">Gasto Ads</th><th class="r">Post-Ads</th><th class="r">%</th></tr></thead><tbody>`;
-  sorted.forEach(([c,d]) => {
-    const mge=d.ing_envio-d.cost_envio;
-    const ads=adsByC[c]||0;
-    const mpa=d.mg_final-ads;
-    const base=d.venta+d.ing_envio; const pct=base?mpa/base:0;
-    tbl+=`<tr><td><strong>${c}</strong></td><td class="r dim">${fmtN(d.n_pedidos)}</td>
-      <td class="r">${fmtEur(d.venta,0)}</td>
-      <td class="r ${clsM(d.mg_prod)}">${fmtEur(d.mg_prod,0)}</td>
-      <td class="r ${clsM(mge)}">${fmtEur(mge,0)}</td>
-      <td class="r ${clsM(d.mg_final)}">${fmtEur(d.mg_final,0)}</td>
-      <td class="r" style="color:var(--org)">${ads>0?fmtEur(-ads,0).replace('−',''):'—'}</td>
-      <td class="r ${clsM(mpa)}"><strong>${fmtEur(mpa,0)}</strong></td>
-      <td class="r ${clsM(pct)}">${fmtPct(pct)}</td></tr>`;
+
+  // Alert: carrier losing big
+  const byCarrier={};
+  ship.forEach(r=>{if(!byCarrier[r.carrier])byCarrier[r.carrier]={mg:0,n:0};byCarrier[r.carrier].mg+=(r.margen_envio||0);byCarrier[r.carrier].n+=(r.n_envios||0);});
+  Object.entries(byCarrier).forEach(([c,d])=>{
+    if(d.mg<-5000)alerts.push({type:'warn',icon:'📦',title:`${c}: −${Math.round(Math.abs(d.mg)).toLocaleString('es-ES')}€ en envíos`,desc:`${fn(d.n)} envíos con margen negativo acumulado. Coste real superior al precio contratado.`,action:'Revisar tarifas con el carrier o ajustar precios cobrados',cls:'org'});
   });
-  tbl += '</tbody></table>';
-  document.getElementById('paises-content').innerHTML = card('Rentabilidad por País — con Google Ads', '', tbl);
+
+  // Alert: reclamaciones
+  if(data.alert_count>0)alerts.push({type:'info',icon:'⚠️',title:`${fn(data.alert_count)} envíos para reclamar`,desc:`Pérdida total de ${fe(data.alert_total_loss||0,0)} en envíos donde el coste supera 3× lo cobrado.`,action:'Ver pestaña Reclamaciones y descargar CSV',cls:'acc'});
+
+  if(!alerts.length){document.getElementById('alerts-strip').innerHTML='';return;}
+  const html=alerts.slice(0,4).map(a=>`
+    <div class="alert-card ${a.type}">
+      <div class="alert-icon">${a.icon}</div>
+      <div class="alert-body">
+        <div class="alert-title">${a.title}</div>
+        <div class="alert-desc">${a.desc}</div>
+        <div class="alert-action ${a.cls}">→ ${a.action}</div>
+      </div>
+    </div>`).join('');
+  document.getElementById('alerts-strip').innerHTML=`<div class="alert-cards">${html}</div>`;
+  document.getElementById('btn-rec').style.display=data.alert_count>0?'inline-flex':'none';
 }
 
-function renderCarriers(data) {
-  const rows = data.shipping; if (!rows||!rows.length) return;
-  const byC = {};
-  rows.forEach(r => {
-    const k=r.carrier;
-    if (!byC[k]) byC[k]={n:0,cost:0,ing:0,mg:0};
-    byC[k].n+=r.n_envios||0; byC[k].cost+=r.coste_total||0; byC[k].ing+=r.ingreso_total||0; byC[k].mg+=r.margen_envio||0;
+// ── POR PAÍS ──────────────────────────────────────────────────
+function renderPaises(data){
+  const R=data.pnl_by_country||[];if(!R.length)return;
+  const byC={};
+  R.forEach(r=>{
+    const c=r.country||'Desconocido';
+    if(!byC[c])byC[c]={venta:0,cogs:0,mg_prod:0,ing_envio:0,cost_envio:0,mg_final:0,gasto_ads:0,mg_post_ads:0,n_pedidos:0};
+    ['venta','cogs','mg_prod','ing_envio','cost_envio','mg_final','gasto_ads','n_pedidos'].forEach(k=>byC[c][k]+=(r[k]||0));
+    byC[c].mg_post_ads+=(r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0);
   });
-  let tbl = `<table class="tbl"><thead><tr><th>Carrier</th><th class="r">Envíos</th><th class="r">Ingreso</th><th class="r">Coste</th><th class="r">Margen</th><th class="r">€/envío</th></tr></thead><tbody>`;
-  Object.entries(byC).sort((a,b)=>a[1].mg-b[1].mg).forEach(([c,d]) => {
-    tbl+=`<tr><td><strong>${c}</strong></td><td class="r dim">${fmtN(d.n)}</td>
-      <td class="r">${fmtEur(d.ing,0)}</td><td class="r neg">${fmtEur(-d.cost,0).replace('−','')}</td>
-      <td class="r ${clsM(d.mg)}">${fmtEur(d.mg,0)}</td>
-      <td class="r ${clsM(d.mg/Math.max(d.n,1))}">${fmtEur(d.mg/Math.max(d.n,1),2)}</td></tr>`;
+  const sorted=Object.entries(byC).filter(([,d])=>d.venta>0).sort((a,b)=>b[1].venta-a[1].venta);
+  let tbl=`<table class="tbl"><thead><tr><th>País</th><th class="r">Pedidos</th><th class="r">Venta</th><th class="r">Mg Producto</th><th class="r">% Mg Prod</th><th class="r">Mg Envío</th><th class="r">Mg Final</th><th class="r">Ads</th><th class="r">Post-Ads</th><th class="r">%</th></tr></thead><tbody>`;
+  sorted.forEach(([c,d])=>{
+    const mge=d.ing_envio-d.cost_envio;const base=d.venta+d.ing_envio;
+    const pp=d.venta?d.mg_prod/d.venta:0;const pa=base?d.mg_post_ads/base:0;
+    tbl+=`<tr><td><strong>${c}</strong></td><td class="r dim">${fn(d.n_pedidos)}</td>
+      <td class="r">${fe(d.venta,0)}</td><td class="r ${cm(d.mg_prod)}">${fe(d.mg_prod,0)}</td>
+      <td class="r ${cm(pp)}">${fp(pp)}</td><td class="r ${cm(mge)}">${fe(mge,0)}</td>
+      <td class="r ${cm(d.mg_final)}">${fe(d.mg_final,0)}</td>
+      <td class="r" style="color:var(--org)">${d.gasto_ads>0?fe(-d.gasto_ads,0).replace('−',''):'—'}</td>
+      <td class="r ${cm(d.mg_post_ads)}"><strong>${fe(d.mg_post_ads,0)}</strong></td>
+      <td class="r ${cm(pa)}">${fp(pa)}</td></tr>`;
   });
   tbl+='</tbody></table>';
-  document.getElementById('carriers-content').innerHTML = card('Margen por Carrier', '', tbl);
+  document.getElementById('paises-content').innerHTML=`<div class="card"><div class="card-hdr"><span class="card-title">Rentabilidad por País</span><span class="card-sub">con Google Ads</span></div><div style="overflow-x:auto">${tbl}</div></div>`;
 }
 
-function renderAlertas(data) {
-  const alerts=data.alerts; if (!alerts||!alerts.length) return;
-  let html = `<div class="alert-strip">⚠️  <strong>${fmtN(alerts.length)} envíos</strong> con pérdida anormal &nbsp;·&nbsp; Pérdida total: <strong>${fmtEur(data.alert_total_loss||0,0)}</strong>
-    <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="exportReclamaciones()">Descargar CSV</button></div>`;
-  let tbl=`<table class="tbl"><thead><tr><th>Ref Pedido</th><th>Carrier</th><th>País</th><th class="r">Peso kg</th><th class="r">Cobrado</th><th class="r">Coste</th><th class="r">Pérdida</th><th class="r">Ratio</th></tr></thead><tbody>`;
-  alerts.slice(0,200).forEach(a => {
+// ── EVOLUCIÓN ─────────────────────────────────────────────────
+function renderEvolucion(data){
+  const evo=data.monthly_by_country;const months=data.all_months||[];
+  if(!evo||!months.length)return;
+  const CTRS=['España','Portugal','Francia','Italia','Alemania','Reino Unido'];
+  const MH=months.map(m=>m.replace('2025-','').replace('2026-',"'26-"));
+
+  const mkTable=(label,valFn,fmtFn)=>{
+    let t=`<table class="tbl"><thead><tr><th>${label}</th>${MH.map(m=>`<th class="r">${m}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>`;
+    CTRS.forEach(c=>{
+      const d=evo[c];if(!d)return;
+      const vals=months.map(ym=>d[ym]?valFn(d[ym]):null);
+      const tot=vals.reduce((a,v)=>a+(v||0),0);
+      t+=`<tr><td><strong>${c}</strong></td>`;
+      vals.forEach(v=>{t+=v!=null?`<td class="r ${cm(v)}">${fmtFn(v)}</td>`:`<td class="r dim">—</td>`;});
+      t+=`<td class="r ${cm(tot)}"><strong>${fmtFn(tot)}</strong></td></tr>`;
+    });
+    return t+'</tbody></table>';
+  };
+
+  const html=
+    `<div class="card"><div class="card-hdr"><span class="card-title">Margen post-Ads por País y Mes</span><span class="card-sub">margen final − Google Ads</span></div><div style="overflow-x:auto">${mkTable('País',r=>r.mg_post_ads!=null?r.mg_post_ads:r.mg_final,v=>fe(v,0))}</div></div>`+
+    `<div class="card"><div class="card-hdr"><span class="card-title">% Margen post-Ads</span></div><div style="overflow-x:auto">${mkTable('País',r=>r.mg_post_ads_pct!=null?r.mg_post_ads_pct:r.mg_pct,v=>fp(v))}</div></div>`+
+    `<div class="card"><div class="card-hdr"><span class="card-title">Pedidos por País y Mes</span></div><div style="overflow-x:auto">${mkTable('País',r=>r.n,v=>fn(v))}</div></div>`;
+  document.getElementById('evolucion-content').innerHTML=html;
+}
+
+// ── COMPARAR ──────────────────────────────────────────────────
+async function runCompare(){
+  const a=document.getElementById('cmp-a').value;
+  const b=document.getElementById('cmp-b').value;
+  if(!a||!b){toast('Selecciona dos períodos','error');return;}
+  showL('Comparando '+a+' vs '+b+'…');
+  try{
+    prog(50);const res=await fetch(`/compare?a=${a}&b=${b}`);prog(90);
+    const data=await res.json();hideL();
+    if(data.error){toast(data.error,'error');return;}
+    renderCompare(data);
+  }catch(e){hideL();toast('Error: '+e.message,'error')}
+}
+
+function renderCompare(data){
+  const {a,b,delta:d,ym_a,ym_b}=data;
+  if(!a||!b){document.getElementById('compare-content').innerHTML='<div class="empty"><div class="empty-title">Sin datos para uno o ambos períodos</div></div>';return;}
+
+  const ROWS=[
+    {label:'Pedidos',            key:'n_pedidos',      fmt:fn,   pct:false},
+    {label:'Venta bruta',        key:'venta',           fmt:v=>fe(v,0), pct:false},
+    {label:'',sep:true},
+    {label:'COGS',               key:'cogs',            fmt:v=>fe(v,0), pct:false, neg:true},
+    {label:'Margen producto',    key:'mg_prod',         fmt:v=>fe(v,0), pct:false, bold:true},
+    {label:'% Margen producto',  key:'mg_prod_pct',     fmt:fp, pct:true},
+    {label:'',sep:true},
+    {label:'Coste envío',        key:'cost_envio',      fmt:v=>fe(v,0), pct:false, neg:true},
+    {label:'Margen envío',       key:'mg_envio',        fmt:v=>fe(v,0), pct:false},
+    {label:'',sep:true},
+    {label:'Margen final',       key:'mg_final',        fmt:v=>fe(v,0), pct:false, bold:true},
+    {label:'% Margen final',     key:'mg_final_pct',    fmt:fp, pct:true},
+    {label:'',sep:true},
+    {label:'Google Ads',         key:'gasto_ads',       fmt:v=>fe(v,0), pct:false, neg:true},
+    {label:'Resultado post-Ads', key:'mg_post_ads',     fmt:v=>fe(v,0), pct:false, bold:true},
+    {label:'% Post-Ads',         key:'mg_post_ads_pct', fmt:fp, pct:true},
+  ];
+
+  let tbl=`<table class="pnl-table">
+    <colgroup><col style="width:36%"><col style="width:20%"><col style="width:20%"><col style="width:24%"></colgroup>
+    <thead><tr>
+      <th>Concepto</th>
+      <th class="col-a" style="text-align:right;padding:8px 14px">${ym_a}</th>
+      <th class="col-b" style="text-align:right;padding:8px 14px">${ym_b}</th>
+      <th style="text-align:right;padding:8px 14px">Variación</th>
+    </tr></thead><tbody>`;
+
+  ROWS.forEach(row=>{
+    if(row.sep){tbl+=`<tr class="separator"><td colspan="4"></td></tr>`;return;}
+    const va=a[row.key];const vb=b[row.key];
+    const diff=delta(vb,va,row.pct);
+    const arrow=diff.v==null?'':diff.v>0?'↑':diff.v<0?'↓':'→';
+    const bold=row.bold?'font-weight:700;':'';
+    const fs=row.bold?'font-size:14px;':'';
+    tbl+=`<tr ${row.bold?'class="highlight"':''}>
+      <td class="row-label${row.bold?' total':''}">${row.label}</td>
+      <td class="val col-a ${cm(row.neg?-(va||0):(va||0))}" style="${bold}${fs}">${va!=null?row.fmt(va):'—'}</td>
+      <td class="val col-b ${cm(row.neg?-(vb||0):(vb||0))}" style="${bold}${fs}">${vb!=null?row.fmt(vb):'—'}</td>
+      <td class="val col-delta ${diff.cls}" style="${bold}${fs}">${arrow} ${diff.str}</td>
+    </tr>`;
+  });
+  tbl+='</tbody></table>';
+
+  // Country breakdown comparison
+  let cmp_ctrs='';
+  if(a.by_country&&b.by_country){
+    const all_c=[...new Set([...Object.keys(a.by_country||{}),...Object.keys(b.by_country||{})])].filter(c=>
+      (a.by_country[c]?.venta||0)+(b.by_country[c]?.venta||0)>0
+    ).sort((x,y)=>(b.by_country[y]?.venta||0)-(b.by_country[x]?.venta||0));
+
+    let ct=`<table class="tbl"><thead><tr><th>País</th><th class="r">${ym_a} Post-Ads</th><th class="r">${ym_b} Post-Ads</th><th class="r">Variación</th><th class="r">${ym_a} %</th><th class="r">${ym_b} %</th></tr></thead><tbody>`;
+    all_c.forEach(c=>{
+      const ra=a.by_country[c]||{};const rb=b.by_country[c]||{};
+      const mpa_a=ra.mg_post_ads!=null?ra.mg_post_ads:ra.mg_final||0;
+      const mpa_b=rb.mg_post_ads!=null?rb.mg_post_ads:rb.mg_final||0;
+      const diff=delta(mpa_b,mpa_a);
+      const ppa=ra.mg_post_ads_pct!=null?ra.mg_post_ads_pct:ra.mg_pct||0;
+      const ppb=rb.mg_post_ads_pct!=null?rb.mg_post_ads_pct:rb.mg_pct||0;
+      ct+=`<tr><td><strong>${c}</strong></td>
+        <td class="r ${cm(mpa_a)}">${fe(mpa_a,0)}</td>
+        <td class="r ${cm(mpa_b)}">${fe(mpa_b,0)}</td>
+        <td class="r col-delta ${diff.cls}">${diff.v>0?'↑':'↓'} ${diff.str}</td>
+        <td class="r ${cm(ppa)}">${fp(ppa)}</td>
+        <td class="r ${cm(ppb)}">${fp(ppb)}</td></tr>`;
+    });
+    ct+='</tbody></table>';
+    cmp_ctrs=`<div class="card" style="margin-top:14px"><div class="card-hdr"><span class="card-title">Por País</span></div><div style="overflow-x:auto">${ct}</div></div>`;
+  }
+
+  document.getElementById('compare-content').innerHTML=
+    `<div class="card"><div class="card-hdr"><span class="card-title">${ym_a} vs ${ym_b}</span><span class="card-sub">cuenta de resultados comparada</span></div>${tbl}</div>${cmp_ctrs}`;
+}
+
+// ── CARRIERS ──────────────────────────────────────────────────
+function renderCarriers(data){
+  const rows=data.shipping;if(!rows||!rows.length)return;
+  const byC={};
+  rows.forEach(r=>{const k=r.carrier;if(!byC[k])byC[k]={n:0,cost:0,ing:0,mg:0};byC[k].n+=r.n_envios||0;byC[k].cost+=r.coste_total||0;byC[k].ing+=r.ingreso_total||0;byC[k].mg+=r.margen_envio||0;});
+  let t=`<table class="tbl"><thead><tr><th>Carrier</th><th class="r">Envíos</th><th class="r">Ingreso</th><th class="r">Coste</th><th class="r">Margen</th><th class="r">€/envío</th></tr></thead><tbody>`;
+  Object.entries(byC).sort((a,b)=>a[1].mg-b[1].mg).forEach(([c,d])=>{
+    const ppe=d.n?d.mg/d.n:0;
+    t+=`<tr><td><strong>${c}</strong></td><td class="r dim">${fn(d.n)}</td><td class="r">${fe(d.ing,0)}</td><td class="r neg">${fe(-d.cost,0).replace('−','')}</td><td class="r ${cm(d.mg)}">${fe(d.mg,0)}</td><td class="r ${cm(ppe)}">${fe(ppe,2)}</td></tr>`;
+  });
+  t+='</tbody></table>';
+  document.getElementById('carriers-content').innerHTML=`<div class="card"><div class="card-hdr"><span class="card-title">Margen por Carrier</span></div><div style="overflow-x:auto">${t}</div></div>`;
+}
+
+// ── RECLAMACIONES ─────────────────────────────────────────────
+function renderAlertas(data){
+  const alerts=data.alerts;if(!alerts||!alerts.length)return;
+  let t=`<table class="tbl"><thead><tr><th>Ref Pedido</th><th>Carrier</th><th>País</th><th class="r">Peso kg</th><th class="r">Cobrado</th><th class="r">Coste</th><th class="r">Pérdida</th><th class="r">Ratio</th></tr></thead><tbody>`;
+  alerts.slice(0,200).forEach(a=>{
     const ratio=a.precio_envio>0?Math.abs(a.cost_eur/a.precio_envio):null;
-    tbl+=`<tr><td><strong>${a.ref}</strong></td><td>${a.carrier}</td><td>${a.country||'—'}</td>
-      <td class="r">${(a.weight_kg||0).toFixed(2)}</td>
-      <td class="r">${fmtEur(a.precio_envio,2)}</td>
-      <td class="r neg">${fmtEur(-a.cost_eur,2).replace('−','')}</td>
-      <td class="r neg"><strong>${fmtEur(a.margin,2)}</strong></td>
-      <td class="r neg">${ratio?ratio.toFixed(1)+'×':'—'}</td></tr>`;
+    t+=`<tr><td><strong>${a.ref}</strong></td><td>${a.carrier}</td><td>${a.country||'—'}</td><td class="r">${(a.weight_kg||0).toFixed(2)}</td><td class="r">${fe(a.precio_envio,2)}</td><td class="r neg">${fe(-a.cost_eur,2).replace('−','')}</td><td class="r neg"><strong>${fe(a.margin,2)}</strong></td><td class="r neg">${ratio?ratio.toFixed(1)+'×':'—'}</td></tr>`;
   });
-  tbl+='</tbody></table>';
-  html += card('Envíos para reclamar', 'coste &gt; 3× cobrado y pérdida &gt; 8€', tbl);
-  document.getElementById('alertas-content').innerHTML = html;
+  t+='</tbody></table>';
+  document.getElementById('alertas-content').innerHTML=
+    `<div class="alert-card urgent" style="margin-bottom:12px"><div class="alert-icon">⚠️</div><div class="alert-body"><div class="alert-title">${fn(alerts.length)} envíos con pérdida anormal · Total ${fe(data.alert_total_loss||0,0)}</div><div class="alert-desc">Coste &gt; 3× lo cobrado al cliente y pérdida &gt; 8€</div></div><button class="btn btn-red btn-sm" onclick="exportReclamaciones()">Descargar CSV</button></div>`+
+    `<div class="card"><div style="overflow-x:auto">${t}</div></div>`;
 }
 
-function renderEvolucion(data) {
-  const evo = data.monthly_by_country;
-  const months = data.all_months || [];
-  if (!evo || !months.length) return;
-
-  const COUNTRIES = ['España','Portugal','Francia','Italia','Alemania','Reino Unido'];
-  const MH = months.map(m => m.replace('2025-','').replace('2026-',"'26-"));
-
-  let html = '';
-
-  // Margen final table
-  let tbl = `<table class="tbl"><thead><tr><th>País</th>${MH.map(m=>`<th class="r">${m}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>`;
-  COUNTRIES.forEach(c => {
-    const d = evo[c]; if (!d) return;
-    const tot = Object.values(d).reduce((a,r) => a+(r.mg_final||0), 0);
-    tbl += `<tr><td><strong>${c}</strong></td>`;
-    months.forEach(ym => {
-      const r = d[ym];
-      if (!r) { tbl += `<td class="r dim">—</td>`; return; }
-      const v = r.mg_post_ads != null ? r.mg_post_ads : r.mg_final;
-      const cls = v >= 0 ? 'pos' : 'neg';
-      tbl += `<td class="r ${cls}">${fmtEur(v,0)}</td>`;
-    });
-    const tc = tot >= 0 ? 'pos' : 'neg';
-    tbl += `<td class="r ${tc}"><strong>${fmtEur(tot,0)}</strong></td></tr>`;
+// ── ADS ───────────────────────────────────────────────────────
+function renderAds(data){
+  const ads=data.ads;if(!ads||!ads.length)return;
+  const R=data.pnl_by_country||[];
+  const mgLookup={};R.forEach(r=>{mgLookup[`${r.country}|${r.ym}`]=r.mg_post_ads!=null?r.mg_post_ads:r.mg_final||0;});
+  let t=`<table class="tbl"><thead><tr><th>País</th><th>Mes</th><th class="r">Gasto Ads</th><th class="r">Conversiones</th><th class="r">ROAS</th><th class="r">Mg Final</th><th class="r">Post-Ads</th></tr></thead><tbody>`;
+  ads.sort((a,b)=>a.pais.localeCompare(b.pais)||a.ym.localeCompare(b.ym)).forEach(a=>{
+    const roas=a.roas||0;const rc=roas>=6?'pos':roas>=3?'warn':'neg';
+    const mg=mgLookup[`${a.pais}|${a.ym}`]??null;
+    const pa=mg!=null?mg-(a.gasto_ads||0):null;
+    t+=`<tr><td><strong>${a.pais}</strong></td><td class="dim">${a.ym}</td>
+      <td class="r neg">${fe(-a.gasto_ads,0).replace('−','')}</td>
+      <td class="r dim">${fn(Math.round(a.conversiones||0))}</td>
+      <td class="r ${rc}">${roas?roas.toFixed(1)+'×':'—'}</td>
+      <td class="r ${mg!=null?cm(mg):''}">${mg!=null?fe(mg,0):'—'}</td>
+      <td class="r ${pa!=null?cm(pa):''}">${pa!=null?`<strong>${fe(pa,0)}</strong>`:'—'}</td></tr>`;
   });
-  tbl += '</tbody></table>';
-  html += card('Margen post-Ads € por País y Mes', 'margen final − Google Ads', tbl);
-
-  // % margin table
-  let tbl2 = `<table class="tbl"><thead><tr><th>País</th>${MH.map(m=>`<th class="r">${m}</th>`).join('')}<th class="r">Media</th></tr></thead><tbody>`;
-  COUNTRIES.forEach(c => {
-    const d = evo[c]; if (!d) return;
-    const vals = Object.values(d).filter(r => r.mg_pct != null);
-    const avg = vals.length ? vals.reduce((a,r) => a+r.mg_pct, 0)/vals.length : null;
-    tbl2 += `<tr><td><strong>${c}</strong></td>`;
-    months.forEach(ym => {
-      const r = d[ym];
-      if (!r || r.mg_pct == null) { tbl2 += `<td class="r dim">—</td>`; return; }
-      const cls = r.mg_pct >= 0 ? 'pos' : 'neg';
-      tbl2 += `<td class="r ${cls}">${fmtPct(r.mg_pct)}</td>`;
-    });
-    const ac = avg && avg >= 0 ? 'pos' : 'neg';
-    tbl2 += `<td class="r ${ac}"><strong>${avg != null ? fmtPct(avg) : '—'}</strong></td></tr>`;
-  });
-  tbl2 += '</tbody></table>';
-  html += card('% Margen Final por País y Mes', '', tbl2);
-
-  // Orders table
-  let tbl3 = `<table class="tbl"><thead><tr><th>País</th>${MH.map(m=>`<th class="r">${m}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>`;
-  COUNTRIES.forEach(c => {
-    const d = evo[c]; if (!d) return;
-    const tot = Object.values(d).reduce((a,r) => a+(r.n||0), 0);
-    tbl3 += `<tr><td><strong>${c}</strong></td>`;
-    months.forEach(ym => {
-      const r = d[ym];
-      tbl3 += r ? `<td class="r dim">${fmtN(r.n)}</td>` : `<td class="r dim">—</td>`;
-    });
-    tbl3 += `<td class="r"><strong>${fmtN(tot)}</strong></td></tr>`;
-  });
-  tbl3 += '</tbody></table>';
-  html += card('Pedidos por País y Mes', '', tbl3);
-
-  document.getElementById('evolucion-content').innerHTML = html;
+  t+='</tbody></table>';
+  document.getElementById('ads-content').innerHTML=`<div class="card"><div class="card-hdr"><span class="card-title">Google Ads + Margen post-publicidad</span></div><div style="overflow-x:auto">${t}</div></div>`;
 }
 
-function renderAds(data) {
-  const ads=data.ads; if (!ads||!ads.length) return;
-  const pnl=data.pnl_by_country||[];
-  const mgLookup={};
-  pnl.forEach(r => { mgLookup[`${r.country}|${r.ym}`]=r.mg_final||0; });
-  let tbl=`<table class="tbl"><thead><tr><th>País</th><th>Mes</th><th class="r">Gasto Ads</th><th class="r">Conv.</th><th class="r">Valor Conv.</th><th class="r">ROAS</th><th class="r">Mg Final</th><th class="r">Post-Ads</th></tr></thead><tbody>`;
-  ads.sort((a,b)=>a.pais.localeCompare(b.pais)||a.ym.localeCompare(b.ym)).forEach(a => {
-    const roas=a.roas||0;
-    const rClass=roas>=6?'pos':roas>=3?'':' style="color:var(--org)"';
-    const mg=mgLookup[`${a.pais}|${a.ym}`]||null;
-    const postAds=mg!=null?mg-(a.gasto_ads||0):null;
-    tbl+=`<tr><td><strong>${a.pais}</strong></td><td class="dim">${a.ym}</td>
-      <td class="r neg">${fmtEur(-(a.gasto_ads||0),0).replace('−','')}</td>
-      <td class="r dim">${fmtN(Math.round(a.conversiones||0))}</td>
-      <td class="r">${fmtEur(a.valor_conv||0,0)}</td>
-      <td class="r"><span class="${roas>=6?'badge badge-grn':roas>=3?'badge badge-org':'badge badge-red'}">${roas?roas.toFixed(1)+'×':'—'}</span></td>
-      <td class="r ${mg!=null?clsM(mg):''}">${mg!=null?fmtEur(mg,0):'—'}</td>
-      <td class="r ${postAds!=null?clsM(postAds):''}">${postAds!=null?`<strong>${fmtEur(postAds,0)}</strong>`:'—'}</td></tr>`;
+// ── EXPORTS ───────────────────────────────────────────────────
+async function exportExcel(){
+  const month=document.getElementById('global-month').value;
+  showL('Generando Excel…');
+  try{const res=await fetch('/export/excel?month='+encodeURIComponent(month));const blob=await res.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Farma2go_PL_${month||'completo'}_${new Date().toISOString().slice(0,10)}.xlsx`;a.click();URL.revokeObjectURL(a.href);hideL();toast('Excel descargado','success');}
+  catch(e){hideL();toast('Error: '+e.message,'error')}
+}
+async function exportReclamaciones(){
+  const month=document.getElementById('global-month').value;
+  showL('Generando CSV…');
+  try{const res=await fetch('/export/reclamaciones?month='+encodeURIComponent(month));const blob=await res.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Reclamaciones_${month||'completo'}_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(a.href);hideL();toast('CSV descargado','success');}
+  catch(e){hideL();toast('Error: '+e.message,'error')}
+}
+
+// ── STATUS & UTILS ────────────────────────────────────────────
+async function clearAll(){
+  if(!confirm('¿Borrar todos los datos?'))return;
+  await fetch('/clear',{method:'POST'});toast('Datos borrados','info');
+  document.querySelectorAll('.carrier-btn').forEach(b=>b.classList.remove('loaded'));
+  refreshStatus();pnlData=null;
+  ['pnl-content','semaphore','alerts-strip','paises-content','evolucion-content','compare-content','carriers-content','alertas-content','ads-content'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.innerHTML='<div class="empty"><div class="empty-icon">◎</div><div class="empty-sub">Sin datos</div></div>';
   });
-  tbl+='</tbody></table>';
-  document.getElementById('ads-content').innerHTML = card('Google Ads + Margen post-publicidad', '', tbl);
 }
 
-async function exportExcel() {
-  const month = document.getElementById('global-month').value;
-  showLoading('Generando Excel…');
-  try {
-    const res = await fetch('/export/excel?month=' + encodeURIComponent(month));
-    const blob = await res.blob();
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `Farma2go_PL_${month||'completo'}_${new Date().toISOString().slice(0,10)}.xlsx`;
-    a.click(); URL.revokeObjectURL(a.href);
-    hideLoading(); showToast('Excel descargado', 'success');
-  } catch(e) { hideLoading(); showToast('Error: ' + e.message, 'error'); }
-}
-
-async function exportReclamaciones() {
-  const month = document.getElementById('global-month').value;
-  showLoading('Generando CSV…');
-  try {
-    const res = await fetch('/export/reclamaciones?month=' + encodeURIComponent(month));
-    const blob = await res.blob();
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `Reclamaciones_${month||'completo'}_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click(); URL.revokeObjectURL(a.href);
-    hideLoading(); showToast('CSV descargado', 'success');
-  } catch(e) { hideLoading(); showToast('Error: ' + e.message, 'error'); }
-}
-
-async function clearAll() {
-  if (!confirm('¿Borrar todos los datos cargados?')) return;
-  await fetch('/clear', { method: 'POST' });
-  showToast('Datos borrados', 'info');
-  document.querySelectorAll('.carrier-btn').forEach(b => {
-    b.classList.remove('loaded');
-    const map={'ctt':'Excel (.xlsx)','inpost':'ZIP con CSV','spring':'Excel (.xlsx)','gls':'Excel (.xlsx)','ups':'CSV','asendia':'Excel (.xlsx)','odoo':'sale_order__.xlsx','shopify':'CSV precios envío','ads':'Inversión_Google_Ads.xlsx'};
-    const id = b.id.replace('btn-',''); const s = b.querySelector('.cb-status');
-    if (s && map[id]) s.textContent = map[id];
-  });
-  refreshStatus(); pnlData = null;
-  ['resumen-content','paises-content','carriers-content','alertas-content','ads-content'].forEach(id => {
-    document.getElementById(id).innerHTML = '<div class="empty"><div class="empty-icon">◎</div><div class="empty-sub">Sin datos</div></div>';
-  });
-  ['kpi-mg','kpi-pct','kpi-ship','kpi-alerts'].forEach(id => { document.getElementById(id).textContent='—'; document.getElementById(id).className='kpi-val'; });
-}
-
-async function refreshStatus() {
-  const res = await fetch('/status'); const data = await res.json();
-  const container = document.getElementById('data-status');
-  if (!data.files||!Object.keys(data.files).length) {
-    container.innerHTML='<div class="ds-row"><div class="ds-dot no"></div><div class="ds-label">Sin datos cargados</div></div>'; return;
+async function refreshStatus(){
+  const res=await fetch('/status');const data=await res.json();
+  const el=document.getElementById('data-status');
+  if(!data.files||!Object.keys(data.files).length){el.innerHTML='<div class="ds-row"><div class="ds-dot no"></div><div class="ds-label">Sin datos cargados</div></div>';return;}
+  if(data.months&&data.months.length){
+    const a=document.getElementById('global-month');const b=document.getElementById('cmp-a');const c=document.getElementById('cmp-b');
+    const cur=a.value;
+    const opts='<option value="">Todos los meses</option>'+data.months.map(m=>`<option value="${m}">${m}</option>`).join('');
+    a.innerHTML=opts;a.value=cur;
+    b.innerHTML='<option value="">Período A</option>'+data.months.map(m=>`<option value="${m}">${m}</option>`).join('');
+    c.innerHTML='<option value="">Período B</option>'+[...data.months].reverse().map(m=>`<option value="${m}">${m}</option>`).join('');
   }
-  if (data.months&&data.months.length) {
-    const sel=document.getElementById('global-month'); const cur=sel.value;
-    sel.innerHTML='<option value="">Todos los meses</option>'+data.months.map(m=>`<option value="${m}" ${m===cur?'selected':''}>${m}</option>`).join('');
-  }
-  container.innerHTML=Object.entries(data.files).map(([k,v])=>`<div class="ds-row"><div class="ds-dot ${v.rows&&v.rows>0?'ok':'warn'}"></div><div class="ds-label">${k}</div><div class="ds-val">${v.rows||0}</div></div>`).join('');
+  el.innerHTML=Object.entries(data.files).map(([k,v])=>`<div class="ds-row"><div class="ds-dot ${v.rows&&v.rows>0?'ok':'warn'}"></div><div class="ds-label">${k}</div><div class="ds-val">${v.rows||0}</div></div>`).join('');
 }
 
-function setTab(id) {
+function setTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   event.target.classList.add('active');
   document.getElementById('panel-'+id).classList.add('active');
-}
-
-
-async function uploadSeed(input) {
-  const file = input.files[0]; if (!file) return;
-  showLoading('Importando histórico...');
-  const fd = new FormData(); fd.append('file', file);
-  try {
-    setProgress(40);
-    const res = await fetch('/seed', { method: 'POST', body: fd });
-    setProgress(90);
-    const data = await res.json();
-    hideLoading();
-    if (data.ok) {
-      showToast('Histórico importado: ' + data.imported.join(', '), 'success');
-      refreshStatus();
-      await loadPnl();
-    } else { showToast('Error: ' + data.error, 'error'); }
-  } catch(e) { hideLoading(); showToast('Error: ' + e.message, 'error'); }
-  input.value = '';
 }
 
 refreshStatus();
@@ -1059,6 +979,17 @@ def clear():
     return jsonify({'ok': True})
 
 
+
+
+@app.route('/compare')
+def compare():
+    ym_a = request.args.get('a', '').strip()
+    ym_b = request.args.get('b', '').strip()
+    if not ym_a or not ym_b:
+        return jsonify({'error': 'Faltan períodos'})
+    from engine import build_comparison
+    result = build_comparison(ym_a, ym_b)
+    return jsonify(clean_nan(result))
 
 @app.route('/seed', methods=['POST'])
 def seed():
