@@ -231,7 +231,7 @@ input[type=file]{display:none}
   <div class="logo">Farma2go <span class="slash">/</span> <span class="sub">Shipping P&L</span></div>
   <div class="header-right">
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-outline btn-sm" onclick="setFilter('')">Todo</button>
+      <button class="btn btn-outline btn-sm" id="btn-f-all" onclick="setFilter('')">Todo</button>
       <button class="btn btn-outline btn-sm" id="btn-f-2025" onclick="setFilter('2025')">2025</button>
       <button class="btn btn-outline btn-sm" id="btn-f-2026" onclick="setFilter('2026')">2026</button>
       <select class="sel" id="global-month" onchange="onMonthChange(this.value)" style="min-width:110px">
@@ -553,7 +553,6 @@ function renderAlertStrip(data){
       </div>
     </div>`).join('');
   document.getElementById('alerts-strip').innerHTML=`<div class="alert-cards">${html}</div>`;
-  document.getElementById('btn-rec').style.display=data.alert_count>0?'inline-flex':'none';
 }
 
 // ── POR PAÍS ──────────────────────────────────────────────────
@@ -772,11 +771,17 @@ let _activeFilter = '';
 
 function setFilter(val) {
   _activeFilter = val;
-  // Highlight active year buttons
-  const b25 = document.getElementById('btn-f-2025');
-  const b26 = document.getElementById('btn-f-2026');
-  if(b25){ b25.style.background = val==='2025'?'var(--acc)':''; b25.style.color = val==='2025'?'#fff':''; }
-  if(b26){ b26.style.background = val==='2026'?'var(--acc)':''; b26.style.color = val==='2026'?'#fff':''; }
+  // Highlight active filter buttons
+  const filters = {'': 'btn-f-all', '2025': 'btn-f-2025', '2026': 'btn-f-2026'};
+  Object.entries(filters).forEach(([fval, fid]) => {
+    const btn = document.getElementById(fid);
+    if(!btn) return;
+    const active = (val === fval) || (val && val.length===7 && fval==='' );
+    const isActive = val === fval;
+    btn.style.background = isActive ? 'var(--acc)' : '';
+    btn.style.color = isActive ? '#fff' : '';
+    btn.style.borderColor = isActive ? 'var(--acc)' : '';
+  });
   // Sync month dropdown
   const sel = document.getElementById('global-month');
   if(sel){ sel.value = (val && val.length===7) ? val : ''; }
