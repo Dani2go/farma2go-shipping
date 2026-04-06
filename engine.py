@@ -28,7 +28,15 @@ COUNTRY_NORM = {
 def save_data(key, df_or_dict):
     path = os.path.join(DATA_DIR, f'{key}.json')
     if isinstance(df_or_dict, pd.DataFrame):
-        df_or_dict.to_json(path, orient='records', force_ascii=False)
+        # Use to_json with double_precision and then fix NaN → null
+        import re
+        raw = df_or_dict.to_json(orient='records', force_ascii=False)
+        # pandas writes NaN as NaN which is invalid JSON — replace with null
+        raw = re.sub(r':NaN', ':null', raw)
+        raw = re.sub(r':Infinity', ':null', raw)
+        raw = re.sub(r':-Infinity', ':null', raw)
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(raw)
     else:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(df_or_dict, f, ensure_ascii=False)
