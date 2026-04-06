@@ -115,42 +115,51 @@ def build_pnl(ym_filter=None):
             months = [ym_filter] if isinstance(ym_filter, str) else ym_filter
             sales_df = sales_df[sales_df['ym'].isin(months)]
 
-        # Exclude shipping product lines
-        from parsers import SHIPPING_PRODUCTS
-        prod_df = sales_df[~sales_df['is_shipping']].copy() if 'is_shipping' in sales_df.columns else sales_df
-        ship_lines = sales_df[sales_df['is_shipping']].copy() if 'is_shipping' in sales_df.columns else pd.DataFrame()
+        # Detect format: pre-aggregated (has 'venta','cogs','mg_prod')
+        # vs raw lines (has 'venta_total','is_shipping')
+        is_aggregated = 'mg_prod' in sales_df.columns and 'venta' in sales_df.columns
 
-        # Order-level product margin
-        order_prod = prod_df.groupby('ref_odoo').agg(
-            plataforma=('plataforma','first'),
-            ym=('ym','first'),
-            country=('country','first') if 'country' in prod_df.columns else ('plataforma','first'),
-            venta=('venta_total','sum'),
-            cogs=('coste_total','sum'),
-        ).reset_index()
-        order_prod['mg_prod'] = order_prod['venta'] - order_prod['cogs']
+        if is_aggregated:
+            # Already order-level — use directly
+            order_merged = sales_df.copy()
+            order_merged['ing_envio'] = pd.to_numeric(order_merged.get('ing_envio', 0), errors='coerce').fillna(0)
+        else:
+            # Raw lines format — aggregate
+            from parsers import SHIPPING_PRODUCTS
+            prod_df   = sales_df[~sales_df['is_shipping']].copy() if 'is_shipping' in sales_df.columns else sales_df
+            ship_lines = sales_df[sales_df['is_shipping']].copy() if 'is_shipping' in sales_df.columns else pd.DataFrame()
 
-        # Shipping revenue from Odoo lines
-        order_ship_rev = ship_lines.groupby('ref_odoo').agg(
-            ing_envio=('venta_total','sum')
-        ).reset_index() if len(ship_lines) else pd.DataFrame(columns=['ref_odoo','ing_envio'])
+            order_prod = prod_df.groupby('ref_odoo').agg(
+                plataforma=('plataforma','first'),
+                ym=('ym','first'),
+                venta=('venta_total','sum'),
+                cogs=('coste_total','sum'),
+            ).reset_index()
+            order_prod['mg_prod'] = order_prod['venta'] - order_prod['cogs']
 
-        order_merged = order_prod.merge(order_ship_rev, on='ref_odoo', how='left')
-        order_merged['ing_envio'] = order_merged['ing_envio'].fillna(0)
+            order_ship_rev = ship_lines.groupby('ref_odoo').agg(
+                ing_envio=('venta_total','sum')
+            ).reset_index() if len(ship_lines) else pd.DataFrame(columns=['ref_odoo','ing_envio'])
 
-        # Merge with shipping costs if available
+            order_merged = order_prod.merge(order_ship_rev, on='ref_odoo', how='left')
+            order_merged['ing_envio'] = order_merged['ing_envio'].fillna(0)
+
+        # Merge with carrier shipping costs via ref_shopify
         if shipping_df is not None and 'ref' in shipping_df.columns:
             ship_cost_by_order = shipping_df.groupby('ref').agg(
                 cost_envio=('cost_eur','sum'),
                 carrier=('carrier','first'),
                 country_carrier=('country','first'),
             ).reset_index()
-            order_merged = order_merged.merge(
-                ship_cost_by_order, left_on='ref_shopify_clean', right_on='ref', how='left'
-            ) if 'ref_shopify_clean' in order_merged.columns else order_merged
+            join_col = 'ref_shopify' if 'ref_shopify' in order_merged.columns else None
+            if join_col:
+                order_merged[join_col] = order_merged[join_col].astype(str).str.lstrip('#').str.strip()
+                order_merged = order_merged.merge(
+                    ship_cost_by_order, left_on=join_col, right_on='ref', how='left'
+                )
 
         if 'cost_envio' in order_merged.columns:
-            order_merged['cost_envio'] = order_merged['cost_envio'].fillna(0)
+            order_merged['cost_envio'] = pd.to_numeric(order_merged['cost_envio'], errors='coerce').fillna(0)
         else:
             order_merged['cost_envio'] = 0
 
@@ -160,8 +169,10 @@ def build_pnl(ym_filter=None):
         results['order_count'] = len(order_merged)
 
         # Country × month P&L
-        grp_col = 'country_carrier' if 'country_carrier' in order_merged.columns else 'country' if 'country' in order_merged.columns else 'plataforma'
-        cty_pnl = order_merged.groupby([grp_col,'ym']).agg(
+        grp_col = ('country_carrier' if 'country_carrier' in order_merged.columns
+                   else 'country' if 'country' in order_merged.columns
+                   else 'plataforma')
+        cty_pnl = order_merged.groupby([grp_col, 'ym']).agg(
             n_pedidos=('ref_odoo','count'),
             venta=('venta','sum'),
             cogs=('cogs','sum'),
@@ -170,7 +181,7 @@ def build_pnl(ym_filter=None):
             cost_envio=('cost_envio','sum'),
             mg_final=('mg_final','sum'),
         ).reset_index()
-        cty_pnl.columns = ['country' if c==grp_col else c for c in cty_pnl.columns]
+        cty_pnl.columns = ['country' if c == grp_col else c for c in cty_pnl.columns]
         cty_pnl['mg_pct'] = cty_pnl['mg_final'] / (cty_pnl['venta'] + cty_pnl['ing_envio']).replace(0, np.nan)
         results['pnl_by_country'] = cty_pnl.to_dict('records')
 
