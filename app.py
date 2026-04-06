@@ -704,15 +704,129 @@ function renderCompare(data){
 // ── CARRIERS ──────────────────────────────────────────────────
 function renderCarriers(data){
   const rows=data.shipping;if(!rows||!rows.length)return;
+
+  // InPost compensation by month (from pnl_by_country España)
+  const inpostCompByYm={};
+  (data.pnl_by_country||[]).filter(r=>r.country==='España').forEach(r=>{
+    if(r.inpost_comp) inpostCompByYm[r.ym]=(inpostCompByYm[r.ym]||0)+r.inpost_comp;
+  });
+
+  // ── TABLE: by carrier, with InPost comp column ────────────────
   const byC={};
-  rows.forEach(r=>{const k=r.carrier;if(!byC[k])byC[k]={n:0,cost:0,ing:0,mg:0};byC[k].n+=r.n_envios||0;byC[k].cost+=r.coste_total||0;byC[k].ing+=r.ingreso_total||0;byC[k].mg+=r.margen_envio||0;});
-  let t=`<table class="tbl"><thead><tr><th>Carrier</th><th class="r">Envíos</th><th class="r">Ingreso</th><th class="r">Coste</th><th class="r">Margen</th><th class="r">€/envío</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const k=r.carrier;
+    if(!byC[k])byC[k]={n:0,cost:0,ing:0,mg:0};
+    byC[k].n+=r.n_envios||0;byC[k].cost+=r.coste_total||0;
+    byC[k].ing+=r.ingreso_total||0;byC[k].mg+=r.margen_envio||0;
+  });
+  const totalComp=Object.values(inpostCompByYm).reduce((a,v)=>a+v,0);
+
+  let t=`<table class="tbl"><thead><tr>
+    <th>Carrier</th><th class="r">Envíos</th><th class="r">Ingreso cobrado</th>
+    <th class="r">Coste carrier</th><th class="r">Margen bruto</th>
+    <th class="r">Compensación</th><th class="r">Margen neto</th><th class="r">€/envío neto</th>
+  </tr></thead><tbody>`;
   Object.entries(byC).sort((a,b)=>a[1].mg-b[1].mg).forEach(([c,d])=>{
-    const ppe=d.n?d.mg/d.n:0;
-    t+=`<tr><td><strong>${c}</strong></td><td class="r dim">${fn(d.n)}</td><td class="r">${fe(d.ing,0)}</td><td class="r neg">${fe(-d.cost,0).replace('−','')}</td><td class="r ${cm(d.mg)}">${fe(d.mg,0)}</td><td class="r ${cm(ppe)}">${fe(ppe,2)}</td></tr>`;
+    const comp=c==='InPost'?totalComp:0;
+    const mgNet=d.mg+comp;const ppe=d.n?mgNet/d.n:0;
+    t+=`<tr>
+      <td><strong>${c}</strong></td><td class="r dim">${fn(d.n)}</td>
+      <td class="r">${fe(d.ing,0)}</td>
+      <td class="r neg">${fe(-d.cost,0).replace('−','')}</td>
+      <td class="r ${cm(d.mg)}">${fe(d.mg,0)}</td>
+      <td class="r ${comp>0?'pos':'dim'}">${comp>0?'+ '+fe(comp,0):'—'}</td>
+      <td class="r ${cm(mgNet)}"><strong>${fe(mgNet,0)}</strong></td>
+      <td class="r ${cm(ppe)}">${fe(ppe,2)}</td>
+    </tr>`;
   });
   t+='</tbody></table>';
-  document.getElementById('carriers-content').innerHTML=`<div class="card"><div class="card-hdr"><span class="card-title">Margen por Carrier</span></div><div style="overflow-x:auto">${t}</div></div>`;
+
+  // ── CHART 1: envíos por carrier por mes ──────────────────────
+  const months=data.all_months||[];
+  const carriers=[...new Set(rows.map(r=>r.carrier))].sort();
+  const COLORS={'CTT':'#1e4d7b','InPost':'#2a7a4b','Spring':'#b85c0a','GLS':'#7030a0','UPS':'#b93535','Asendia':'#5a524a'};
+  const BAR_H=22;const CHART_W=560;const LEFT=60;const TOP=30;const BOTTOM=30;
+  const monthEnvios={};
+  rows.forEach(r=>{
+    const k=r.ym;if(!monthEnvios[k])monthEnvios[k]={};
+    monthEnvios[k][r.carrier]=(monthEnvios[k][r.carrier]||0)+(r.n_envios||0);
+  });
+  const visMonths=months.filter(m=>monthEnvios[m]);
+  const maxEnvios=Math.max(...visMonths.map(m=>Object.values(monthEnvios[m]||{}).reduce((a,v)=>a+v,0)));
+  const chartH=visMonths.length*BAR_H+TOP+BOTTOM;
+
+  let bars='';
+  visMonths.forEach((ym,mi)=>{
+    const y=TOP+mi*BAR_H;const total=Object.values(monthEnvios[ym]||{}).reduce((a,v)=>a+v,0);
+    let xOff=LEFT;
+    carriers.forEach(c=>{
+      const n=monthEnvios[ym]?.[c]||0;if(!n)return;
+      const w=Math.round((n/maxEnvios)*(CHART_W-LEFT-4));
+      bars+=`<rect x="${xOff}" y="${y+2}" width="${w}" height="${BAR_H-4}" fill="${COLORS[c]||'#888'}" rx="2" opacity="0.85">
+        <title>${c}: ${fn(n)} envíos</title></rect>`;
+      xOff+=w;
+    });
+    bars+=`<text x="${LEFT-4}" y="${y+BAR_H/2+4}" text-anchor="end" font-size="9" fill="#9a8f84">${ym.replace('2025-','').replace('2026-',"'26-")}</text>`;
+    bars+=`<text x="${xOff+4}" y="${y+BAR_H/2+4}" font-size="9" fill="#5a524a">${fn(total)}</text>`;
+  });
+  // Legend
+  let legend='';let lx=LEFT;
+  carriers.forEach(c=>{
+    legend+=`<rect x="${lx}" y="${chartH-16}" width="10" height="10" fill="${COLORS[c]||'#888'}" rx="2"/>`;
+    legend+=`<text x="${lx+13}" y="${chartH-7}" font-size="9" fill="#5a524a">${c}</text>`;
+    lx+=60;
+  });
+  const svgEnvios=`<svg width="100%" viewBox="0 0 ${CHART_W} ${chartH}" xmlns="http://www.w3.org/2000/svg" style="font-family:'DM Sans',sans-serif">
+    <text x="${LEFT}" y="16" font-size="11" font-weight="600" fill="#1a1714">Envíos por carrier y mes</text>
+    ${bars}${legend}
+  </svg>`;
+
+  // ── CHART 2: margen neto por carrier por mes ──────────────────
+  const monthMg={};
+  rows.forEach(r=>{
+    const k=r.ym;if(!monthMg[k])monthMg[k]={};
+    monthMg[k][r.carrier]=(monthMg[k][r.carrier]||0)+(r.margen_envio||0);
+  });
+  // Add InPost compensation
+  Object.entries(inpostCompByYm).forEach(([ym,comp])=>{
+    if(!monthMg[ym])monthMg[ym]={};
+    monthMg[ym]['InPost']=(monthMg[ym]['InPost']||0)+comp;
+  });
+
+  const allMgVals=visMonths.flatMap(m=>Object.values(monthMg[m]||{}));
+  const maxMg=Math.max(...allMgVals.map(Math.abs),1);
+  const MG_W=CHART_W-LEFT-80;const ZERO=LEFT+Math.round(MG_W*0.4);
+  const chartH2=visMonths.length*BAR_H+TOP+BOTTOM+20;
+  let bars2='';
+  // Zero line
+  bars2+=`<line x1="${ZERO}" y1="${TOP}" x2="${ZERO}" y2="${chartH2-BOTTOM-20}" stroke="#e4dfd8" stroke-width="1"/>`;
+  bars2+=`<text x="${ZERO}" y="${TOP-4}" text-anchor="middle" font-size="8" fill="#9a8f84">0</text>`;
+  visMonths.forEach((ym,mi)=>{
+    const y=TOP+mi*BAR_H;
+    carriers.forEach(c=>{
+      const v=monthMg[ym]?.[c]||0;if(!v)return;
+      const w=Math.round((Math.abs(v)/maxMg)*(MG_W*0.55));
+      const x=v>=0?ZERO:ZERO-w;
+      bars2+=`<rect x="${x}" y="${y+2}" width="${w}" height="${BAR_H-4}" fill="${COLORS[c]||'#888'}" rx="2" opacity="${v>=0?0.85:0.6}">
+        <title>${c} ${ym}: ${fe(v,0)}</title></rect>`;
+    });
+    const totalMg=Object.values(monthMg[ym]||{}).reduce((a,v)=>a+v,0);
+    bars2+=`<text x="${LEFT-4}" y="${y+BAR_H/2+4}" text-anchor="end" font-size="9" fill="#9a8f84">${ym.replace('2025-','').replace('2026-',"'26-")}</text>`;
+    const tx=totalMg>=0?ZERO+Math.round((totalMg/maxMg)*MG_W*0.55)+4:ZERO-Math.round((Math.abs(totalMg)/maxMg)*MG_W*0.55)-4;
+    bars2+=`<text x="${tx}" y="${y+BAR_H/2+4}" font-size="9" fill="${totalMg>=0?'#2a7a4b':'#b93535'}" text-anchor="${totalMg>=0?'start':'end'}">${fe(totalMg,0)}</text>`;
+  });
+  bars2+=legend.replace(`y="${chartH-16}"`,`y="${chartH2-36}"`).replace(`y="${chartH-7}"`,`y="${chartH2-27}"`);
+  const svgMg=`<svg width="100%" viewBox="0 0 ${CHART_W} ${chartH2}" xmlns="http://www.w3.org/2000/svg" style="font-family:'DM Sans',sans-serif">
+    <text x="${LEFT}" y="16" font-size="11" font-weight="600" fill="#1a1714">Margen neto por carrier y mes (con compensación InPost)</text>
+    ${bars2}
+  </svg>`;
+
+  document.getElementById('carriers-content').innerHTML=
+    `<div class="card"><div class="card-hdr"><span class="card-title">Resumen por Carrier</span><span class="card-sub">compensación InPost/Mondial Relay incluida</span></div><div style="overflow-x:auto">${t}</div></div>`+
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">`+
+    `<div class="card"><div class="card-body" style="padding:14px">${svgEnvios}</div></div>`+
+    `<div class="card"><div class="card-body" style="padding:14px">${svgMg}</div></div>`+
+    `</div>`;
 }
 
 
